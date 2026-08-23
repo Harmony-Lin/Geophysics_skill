@@ -1,0 +1,28 @@
+# 天然地震数据处理自动化框架 - Python 依赖
+# Python >= 3.11
+
+# --- 地震学核心 ---
+obspy>=1.4.1            # 数据获取/预处理/震级计算
+seisbench>=0.8          # 深度学习震相拾取 (PhaseNet 等)
+gmma @ git+https://github.com/AI4EPS/gamma.git  # 震相关联（如安装失败可注释，见 docs/install.md）
+
+# --- 深度学习后端 ---
+torch>=2.2              # SeisBench 依赖；GPU 版请按官方指引单独安装
+numpy>=1.26
+pandas>=2.2
+scipy>=1.12
+
+# --- 制图与空间分析 ---
+pygmt>=0.12             # 出版级地图（需系统 GMT 6，conda-forge 安装更佳）
+cartopy>=0.22
+matplotlib>=3.8
+pyproj>=3.6
+
+# --- 活动性分析 ---
+pycsep>=0.6             # CSEP 官方库（可选）
+
+# --- 工具与工程化 ---
+tqdm>=4.66
+pyyaml>=6.0
+click>=8.1              # 脚本 CLI 参数解析
+rich>=13.7              # 终端日志美化

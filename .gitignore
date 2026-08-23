@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# 数据与模型权重（不入库）
+data/*
+!data/.gitkeep
+models/
+*.mseed
+*.sac
+*.h5
+*.pt
+*.pth
+
+# 缓存
+.cache/
+seisbench_cache/
+
+# Docker 输出
+*.tar
+docker/*.log
+
+# 系统
+.DS_Store
+Thumbs.db
