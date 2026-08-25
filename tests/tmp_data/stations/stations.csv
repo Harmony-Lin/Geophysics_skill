@@ -1,0 +1,5 @@
+station,network,station_code,latitude,longitude,elevation_m
+XX.STA1.,XX,STA1,30.6,117.0,100.0
+XX.STA2.,XX,STA2,30.7,117.15,100.0
+XX.STA3.,XX,STA3,30.55,117.2,100.0
+XX.STA4.,XX,STA4,30.65,116.9,100.0

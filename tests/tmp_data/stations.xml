@@ -1,0 +1,73 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1" schemaVersion="1.2">
+  <Source>synthetic-test</Source>
+  <Module>ObsPy 1.5.0</Module>
+  <ModuleURI>https://www.obspy.org</ModuleURI>
+  <Created>2026-08-23T18:37:14.349356Z</Created>
+  <Network code="XX">
+    <Station code="STA1">
+      <Latitude unit="DEGREES">30.6</Latitude>
+      <Longitude unit="DEGREES">117.0</Longitude>
+      <Elevation unit="METERS">100.0</Elevation>
+      <Site>
+        <Name>synthetic</Name>
+      </Site>
+      <CreationDate>2026-08-23T18:37:14.349069Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">30.6</Latitude>
+        <Longitude unit="DEGREES">117.0</Longitude>
+        <Elevation unit="METERS">100.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="STA2">
+      <Latitude unit="DEGREES">30.7</Latitude>
+      <Longitude unit="DEGREES">117.15</Longitude>
+      <Elevation unit="METERS">100.0</Elevation>
+      <Site>
+        <Name>synthetic</Name>
+      </Site>
+      <CreationDate>2026-08-23T18:37:14.349171Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">30.7</Latitude>
+        <Longitude unit="DEGREES">117.15</Longitude>
+        <Elevation unit="METERS">100.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="STA3">
+      <Latitude unit="DEGREES">30.55</Latitude>
+      <Longitude unit="DEGREES">117.2</Longitude>
+      <Elevation unit="METERS">100.0</Elevation>
+      <Site>
+        <Name>synthetic</Name>
+      </Site>
+      <CreationDate>2026-08-23T18:37:14.349214Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">30.55</Latitude>
+        <Longitude unit="DEGREES">117.2</Longitude>
+        <Elevation unit="METERS">100.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="STA4">
+      <Latitude unit="DEGREES">30.65</Latitude>
+      <Longitude unit="DEGREES">116.9</Longitude>
+      <Elevation unit="METERS">100.0</Elevation>
+      <Site>
+        <Name>synthetic</Name>
+      </Site>
+      <CreationDate>2026-08-23T18:37:14.349316Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">30.65</Latitude>
+        <Longitude unit="DEGREES">116.9</Longitude>
+        <Elevation unit="METERS">100.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+  </Network>
+</FDSNStationXML>

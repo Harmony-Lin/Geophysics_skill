@@ -1,0 +1,23 @@
+# HypoDD input file template (hypoDD.inp)
+# Copied verbatim into the run directory by scripts/run_hypodd.py.
+# Adjust MINLINK / MAXSEP / weights per references/hypodd_workflow.md.
+
+DTCT  0 -10 10 1
+IDRC  3
+MAXDIST 200
+MINLINK 8
+MAXSEP 10
+CLUSTER 5
+OBSCC  8
+OBSCT  4
+ITER   4
+IDRV   0.000001
+VDAMP  0.1
+VPVS    1.732
+VDTOP   2.0
+VDBOT   60.0
+WDCC    1.0
+WDCT    1.0
+SYS     1
+DESC    0
+OUT     1
