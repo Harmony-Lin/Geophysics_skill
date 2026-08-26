@@ -77,7 +77,6 @@ def locate_event(picks_ev, stations, layers,
     s_picks = picks_ev[picks_ev["phase"].str.upper().str.startswith("S")]
     if len(p_picks) < 3:
         return None
-
     lats = np.arange(lat_range[0], lat_range[1] + 1e-9,
                      cell_km / 111.19)
     lons = np.arange(lon_range[0], lon_range[1] + 1e-9,
@@ -115,7 +114,7 @@ def locate_event(picks_ev, stations, layers,
                     if code not in t_pred or np.isnan(t_pred[code][1]):
                         continue
                     origins.append(pk["time_num"] - t_pred[code][1])
-                if len(origins) < 4:
+                if len(origins) < 3:
                     continue
                 origins = np.array(origins)
                 o = np.median(origins)
@@ -163,7 +162,7 @@ def main() -> None:
         ev_picks = picks[
             (picks["time_dt"] >= ev_time - pd.Timedelta(seconds=60))
             & (picks["time_dt"] <= ev_time + pd.Timedelta(seconds=120))]
-        if len(ev_picks) < 4:
+        if len(ev_picks) < 3:
             warn(f"{ev['event_id']}: too few picks ({len(ev_picks)}), skipped")
             continue
         # coarse search box around GaMMA initial location ±0.5 deg / ±20 km

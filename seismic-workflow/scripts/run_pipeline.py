@@ -18,15 +18,34 @@ from common import emit, ensure_dir, log, run_main, warn  # noqa: E402
 SCRIPTS = Path(__file__).parent
 
 
+def parse_last_json(text: str) -> dict:
+    """Extract the last complete JSON object from mixed stdout.
+
+    Some libraries (e.g. GaMMA) print progress lines to stdout, polluting
+    the JSON contract; scan for the last balanced {...} block.
+    """
+    if not text or not text.strip():
+        return {}
+    decoder = json.JSONDecoder()
+    for idx in range(len(text) - 1, -1, -1):
+        if text[idx] != "{":
+            continue
+        try:
+            obj, end = decoder.raw_decode(text[idx:])
+            return obj
+        except json.JSONDecodeError:
+            continue
+    return {}
+
+
 def run_step(name: str, cmd: list[str]) -> dict:
     log(f"=== Phase {name}: {' '.join(cmd)}")
     proc = subprocess.run(cmd, capture_output=True, text=True)
     (Path("data") / "pipeline_logs").mkdir(parents=True, exist_ok=True)
     (Path("data") / "pipeline_logs" / f"{name}.log").write_text(
         (proc.stdout or "") + "\n---STDERR---\n" + (proc.stderr or ""))
-    try:
-        result = json.loads(proc.stdout) if proc.stdout.strip() else {}
-    except json.JSONDecodeError:
+    result = parse_last_json(proc.stdout)
+    if not result:
         result = {"status": "error", "error": "non-JSON stdout",
                   "stdout_tail": (proc.stdout or "")[-1000:]}
     if proc.returncode != 0 or result.get("status") not in ("ok", "warning"):

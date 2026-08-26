@@ -1,19 +1,18 @@
 {
-  "use_eikonal": false,
-  "vel_p": 6.0,
-  "vel_s": 3.5,
-  "eikonal_dxy": 1.0,
-  "eikonal_dt": 0.05,
-  "min_picks_per_eq": 8,
-  "max_sigma11": 2.0,
+  "dims": ["x(km)", "y(km)", "z(km)"],
+  "vel": {"p": 6.0, "s": 3.5},
+  "use_amplitude": false,
+  "use_dbscan": false,
+  "eikonal": null,
+  "min_picks_per_eq": 3,
+  "min_p_picks_per_eq": 2,
+  "min_s_picks_per_eq": 0,
+  "min_stations": 3,
+  "max_sigma11": 5.0,
   "max_sigma12": 1.0,
   "max_sigma22": 1.0,
-  "loc_dim": "3d",
-  "vel_dict": {
-    "P": {"cov_type": "prior", "std": 1.0},
-    "S": {"cov_type": "prior", "std": 1.5}
-  },
   "method": "BGMM",
   "oversample_factor": 4,
-  "bfgs_iterations": 10
+  "bfgs_iterations": 10,
+  "ncpu": 1
 }
