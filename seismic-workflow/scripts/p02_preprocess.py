@@ -70,8 +70,11 @@ def main() -> None:
                 tr.detrend("demean") #去除均值
                 if inventory is not None and args.remove_response: #去仪器响应
                     tr.remove_response(inventory=inventory, output="VEL", water_level=60)
+                    # obspy 不会自动设置 units；手动标记，供下游阶段识别物理单位
+                    tr.stats.units = "M/S"
                 elif args.remove_response:
                     tr.remove_response(output="VEL", water_level=60)
+                    tr.stats.units = "M/S"
                 tr.filter("bandpass", freqmin=f_lo, freqmax=f_hi, corners=4, #带通滤波
                           zerophase=True)
                 # resample via decimation/interpolation to target rate

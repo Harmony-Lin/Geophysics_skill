@@ -38,48 +38,6 @@ def _annotate_events(ax, catalog, max_labels=30):
                         fontsize=6, color="darkred")
 
 
-def _add_vector_features(ax, lon_min, lon_max, lat_min, lat_max):
-    """叠加 Natural Earth 矢量要素（海岸线、国界、州界、河流、湖泊、
-    道路、城镇），按区域跨度自动选择分辨率（10m/50m/110m）。
-
-    每个要素独立 try/except：下载失败或要素缺失时跳过，不影响成图。
-    """
-    import cartopy.feature as cfeature
-    span = max(lon_max - lon_min, lat_max - lat_min)
-    res = "10m" if span <= 1.0 else ("50m" if span <= 8.0 else "110m")
-
-    def _add(category, name, **kw):
-        try:
-            ax.add_feature(cfeature.NaturalEarthFeature(
-                category, name, res, **kw))
-        except Exception as exc:
-            warn(f"vector feature {name} ({res}) skipped: {exc}")
-
-    # 底色（110m 常量即可，仅作背景）
-    ax.add_feature(cfeature.LAND, facecolor="lightgray", zorder=0)
-    ax.add_feature(cfeature.OCEAN, facecolor="white", zorder=0)
-    # 河流与湖泊
-    _add("physical", "rivers_lake_centerlines",
-         edgecolor="steelblue", facecolor="none", linewidth=0.6, zorder=1)
-    _add("physical", "lakes", facecolor="lightblue",
-         edgecolor="steelblue", linewidth=0.4, zorder=1)
-    # 海岸线
-    _add("physical", "coastline", edgecolor="black",
-         facecolor="none", linewidth=0.6, zorder=2)
-    # 国界与州/省界
-    _add("cultural", "admin_0_boundary_lines_land",
-         edgecolor="gray", facecolor="none", linewidth=0.6, zorder=2)
-    _add("cultural", "admin_1_states_provinces_lines",
-         edgecolor="gray", facecolor="none", linewidth=0.4, zorder=2)
-    # 道路（仅 10m 分辨率提供）
-    if res == "10m":
-        _add("cultural", "roads", edgecolor="darkgray",
-             facecolor="none", linewidth=0.3, zorder=1)
-    # 城镇（点要素，FeatureArtist 不支持 marker 参数，用默认样式）
-    _add("cultural", "populated_places", edgecolor="none",
-         facecolor="none", zorder=2)
-
-
 def plot_epicenter_map(catalog, stations, out_png: Path) -> str:
     """Try PyGMT first; fall back to Cartopy/Matplotlib. Returns backend name."""
     try:
@@ -92,8 +50,7 @@ def plot_epicenter_map(catalog, stations, out_png: Path) -> str:
         fig = pygmt.Figure()
         fig.basemap(region=region, projection="M12c",
                     frame=["af", 'WSne+t"Epicenter distribution"'])
-        fig.coast(land="lightgray", water="white", borders=1, roads="gray",
-                  rivers=1, lakes=True)
+        fig.coast(land="lightgray", water="white", borders=1, roads="gray")
         fig.plot(x=catalog["longitude"], y=catalog["latitude"],
                  style="c0.15c", color="red", pen="black",
                  label="earthquake")
@@ -134,19 +91,14 @@ def plot_epicenter_map(catalog, stations, out_png: Path) -> str:
         fig, ax = plt.subplots(figsize=(9, 8),
                                subplot_kw={"projection": proj})
         ax.set_extent([lon_min, lon_max, lat_min, lat_max], crs=proj)
-        _add_vector_features(ax, lon_min, lon_max, lat_min, lat_max)
-        # 注意：不用 cartopy 的 gridlines —— Cartopy 0.25 的 gridliner 在
-        # PlateCarree + 特定 extent 下会触发 "LinearRing do not form a
-        # closed linestring" 的 GEOS 异常，改用普通经纬度刻度。
-        import numpy as _np
-        lon_step = 0.5 if (lon_max - lon_min) <= 4 else 1.0
-        lat_step = 0.5 if (lat_max - lat_min) <= 4 else 1.0
-        ax.set_xticks(_np.arange(_np.floor(lon_min), _np.ceil(lon_max) + 1,
-                                 lon_step))
-        ax.set_yticks(_np.arange(_np.floor(lat_min), _np.ceil(lat_max) + 1,
-                                 lat_step))
-        ax.set_xticklabels([f"{x:.1f}°" for x in ax.get_xticks()])
-        ax.set_yticklabels([f"{y:.1f}°" for y in ax.get_yticks()])
+        ax.add_feature(cfeature.LAND, facecolor="lightgray")
+        ax.add_feature(cfeature.OCEAN, facecolor="white")
+        ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
+        ax.add_feature(cfeature.BORDERS, linewidth=0.5)
+        ax.add_feature(cfeature.STATES, linewidth=0.4, edgecolor="gray")
+        gl = ax.gridlines(draw_labels=True, linestyle=":",
+                          linewidth=0.4, color="gray")
+        gl.top_labels = gl.right_labels = False
         backend = "cartopy"
     except Exception as exc:
         warn(f"Cartopy unavailable ({exc}); plain Matplotlib map")
@@ -317,12 +269,13 @@ def plot_residuals(catalog, out_png: Path):
 
 
 def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
-                      n_events: int = 4, window_s: float = 60.0) -> dict | None:
+                      event: str = "main", window_s: float = 60.0) -> dict | None:
     """Phase 3 sample figure: waveforms with PhaseNet picks overlaid.
 
-    Selects a few events (by pick-time clustering), plots the vertical
-    traces of the stations that picked them, and marks P (red) / S (blue)
-    pick times. Only a representative sample is drawn, not all events.
+    Plots ONE event — by default the mainshock (the event with the most
+    picks). Each station that picked the event gets its own subplot; the
+    vertical (Z) channel is preferred for the waveform, and the P (red) /
+    S (blue) pick times of that station are marked on its subplot.
     """
     import pandas as pd
     picks = pd.read_csv(picks_csv)
@@ -330,7 +283,7 @@ def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
         warn("no picks — skipping pick sample plot")
         return None
 
-    from obspy import read, UTCDateTime
+    from obspy import read
 
     picks["time"] = pd.to_datetime(picks["time"], errors="coerce",
                                    format="mixed", utc=True)
@@ -345,9 +298,22 @@ def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
     picks["event"] = (picks["time"].diff() > gap).cumsum()
     order = (picks.groupby("event")["time"].min()
              .sort_values().index.tolist())
-    # prefer the largest-magnitude-looking events: most picks per event
-    sel = sorted(order, key=lambda e: -len(picks[picks.event == e]))[:n_events]
-    sel = [order.index(e) for e in sorted(sel)]
+
+    # choose the event: "main" = most picks (mainshock), or an index
+    def _mainshock():
+        return max(order, key=lambda e: len(picks[picks.event == e]))
+
+    if str(event).lower() in ("main", "mainshock", "largest"):
+        ev_idx = _mainshock()
+    else:
+        try:
+            ev_idx = order[int(event)]
+        except (ValueError, IndexError):
+            warn(f"invalid --event {event!r}; falling back to mainshock")
+            ev_idx = _mainshock()
+
+    ev = picks[picks.event == ev_idx]
+    t0 = ev["time"].min()
 
     import matplotlib
     matplotlib.use("Agg")
@@ -364,24 +330,24 @@ def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
         except Exception as exc:
             warn(f"unreadable waveform skipped: {f.name} ({exc})")
 
-    n_rows = sum(len(sel) and 1 for _ in sel)
+    # one subplot per station that picked the event
+    stations = sorted(ev["station"].unique())
+    n_rows = len(stations)
     fig, axes = plt.subplots(n_rows, 1, figsize=(11, 2.6 * n_rows),
                              squeeze=False)
 
-    info = {"events_plotted": 0, "picks_plotted": 0}
-    for r, ev_idx in enumerate(sel):
+    info = {"event": ev_idx, "n_stations": n_rows,
+            "stations_plotted": 0, "picks_plotted": 0}
+    for r, sta in enumerate(stations):
         ax = axes[r][0]
-        ev = picks[picks.event == order[ev_idx]]
-        t0 = ev["time"].min()
+        sta_picks = ev[ev["station"] == sta]
+        cands = [trs for tid, lst in streams.items()
+                 if tid.split(".")[1] == sta.split(".")[1]
+                 for trs in lst]
+        # prefer the vertical (Z) channel of this station
+        cands.sort(key=lambda tr: 0 if tr.id.endswith("Z") else 1)
         plotted = False
-        for row in ev.itertuples():
-            trace_id = str(row.station)
-            cands = [trs for tid, lst in streams.items()
-                     if tid.split(".")[1] == trace_id.split(".")[1]
-                     for trs in lst]
-            if not cands:
-                continue
-            tr = cands[0]
+        for tr in cands:
             delta = (pd.Timestamp(tr.stats.starttime.datetime).tz_localize("UTC")
                      - t0).total_seconds()
             tt = np.arange(tr.stats.npts) / tr.stats.sampling_rate + delta
@@ -390,8 +356,8 @@ def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
                 continue
             ax.plot(tt[m], tr.data[m], lw=0.7, color="black")
             plotted = True
-            break  # one representative trace per event keeps the figure clean
-        for prow in ev.itertuples():
+            break
+        for prow in sta_picks.itertuples():
             dt = (prow.time - t0).total_seconds()
             if dt < -5 or dt > window_s:
                 continue
@@ -400,19 +366,18 @@ def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
             info["picks_plotted"] += 1
         ax.set_xlim(-5, window_s)
         ax.set_ylabel("counts")
-        mag_txt = ""
-        ax.set_title(
-            f"event {ev_idx + 1}: origin≈{t0.strftime('%Y-%m-%d %H:%M:%S')} UTC"
-            f"  ({len(ev)} picks){mag_txt}", fontsize=9, loc="left")
+        ax.set_title(f"{sta}  ({len(sta_picks)} picks)", fontsize=9, loc="left")
         if plotted:
-            info["events_plotted"] += 1
+            info["stations_plotted"] += 1
 
     from matplotlib.lines import Line2D
     handles = [Line2D([], [], color="red", lw=1.2, label="P pick"),
                Line2D([], [], color="blue", lw=1.2, label="S pick")]
-    axes[-1][0].set_xlabel("Time since first pick (s)")
+    axes[-1][0].set_xlabel("Time since origin (s)")
     fig.legend(handles=handles, loc="upper right", ncol=2)
-    fig.suptitle("PhaseNet picking samples (Phase 3)", fontsize=12)
+    fig.suptitle(f"PhaseNet picks — event {ev_idx + 1} "
+                 f"(origin≈{t0.strftime('%Y-%m-%d %H:%M:%S')} UTC, "
+                 f"{len(ev)} picks)", fontsize=12)
     fig.tight_layout(rect=(0, 0, 1, 0.96))
     fig.savefig(out_png, dpi=200)
     plt.close(fig)
@@ -426,6 +391,9 @@ def main() -> None:
     parser.add_argument("--waveforms", dest="waveforms",
                         default="data/preprocessed",
                         help="preprocessed waveform dir for pick sample plot")
+    parser.add_argument("--event", default="main",
+                        help="event to plot: 'main' (mainshock, most picks) "
+                             "or an event index (default: main)")
     parser.add_argument("--stations", required=True)
     parser.add_argument("--output-dir", dest="output_dir", required=True)
     parser.add_argument("--backend-note", dest="backend_note", default="")
@@ -451,10 +419,11 @@ def main() -> None:
 
     pick_info = None
     if args.picks and Path(args.picks).exists():
-        log("Plotting PhaseNet picking samples...")
+        log("Plotting PhaseNet picking samples (mainshock)...")
         try:
             pick_info = plot_pick_samples(args.picks, args.waveforms,
-                                          outdir / "pick_samples.png")
+                                          outdir / "pick_samples.png",
+                                          event=args.event)
         except Exception as exc:
             warn(f"pick sample plot failed: {exc}")
     else:

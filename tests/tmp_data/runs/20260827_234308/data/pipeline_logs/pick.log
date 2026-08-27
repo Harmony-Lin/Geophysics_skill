@@ -1,0 +1,14 @@
+{
+  "status": "ok",
+  "model": "phasenet",
+  "device": "cuda",
+  "n_files": 6,
+  "n_traces": 90,
+  "n_picks": 159,
+  "n_p_picks": 78,
+  "n_s_picks": 81,
+  "picks_file": "data\\picks\\phasenet_picks.csv"
+}
+
+---STDERR---
+[INFO] Loading phasenet model (device=cuda)...

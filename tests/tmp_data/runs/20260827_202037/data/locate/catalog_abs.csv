@@ -1,2 +1,0 @@
-event_id,time,latitude,longitude,depth_km,magnitude,magnitude_type,n_picks,rms_s
-ev000001,2024-01-19 21:34:33.630260079+00:00,64.4266,-146.8182,15.0,,,8,0.372

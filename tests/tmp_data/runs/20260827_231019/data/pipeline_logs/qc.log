@@ -1,0 +1,37 @@
+{
+  "status": "ok",
+  "n_events": 1,
+  "map_backend": "matplotlib",
+  "mc": null,
+  "b_value": null,
+  "mean_rms_s": 0.372,
+  "report_file": "data\\qc\\report.md",
+  "plots": [
+    "epicenter_map.png",
+    "gr_relation.png",
+    "depth_histogram.png",
+    "residuals.png",
+    "pick_samples.png"
+  ],
+  "pick_samples": {
+    "event": 1,
+    "n_stations": 5,
+    "stations_plotted": 5,
+    "picks_plotted": 17
+  }
+}
+
+---STDERR---
+[INFO] Plotting epicenter map...
+[WARN] PyGMT unavailable (Error loading GMT shared library at 'gmt.dll'.
+Could not find module 'gmt.dll' (or one of its dependencies). Try using the full path with constructor syntax.
+Error loading GMT shared library at 'gmt_w64.dll'.
+Could not find module 'gmt_w64.dll' (or one of its dependencies). Try using the full path with constructor syntax.
+Error loading GMT shared library at 'gmt_w32.dll'.
+Could not find module 'gmt_w32.dll' (or one of its dependencies). Try using the full path with constructor syntax.); falling back to Matplotlib/Cartopy
+[WARN] Cartopy render failed (IllegalArgumentException: Points of LinearRing do not form a closed linestring); retrying with plain Matplotlib
+[INFO] Computing G-R relation...
+[WARN] no magnitudes in catalog ¡ª skipping G-R plot
+[INFO] Plotting depth histogram...
+[INFO] Plotting residuals...
+[INFO] Plotting PhaseNet picking samples (mainshock)...

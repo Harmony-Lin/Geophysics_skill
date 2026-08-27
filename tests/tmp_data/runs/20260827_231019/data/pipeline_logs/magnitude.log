@@ -1,0 +1,26 @@
+{
+  "status": "ok",
+  "magnitude_available": true,
+  "n_events": 1,
+  "n_events_with_magnitude": 0,
+  "median_magnitude": null,
+  "catalog_file": "data\\locate\\catalog_final.csv"
+}
+
+---STDERR---
+[INFO] Loaded station list from data/stations/stations.csv (5 stations)
+[INFO] Loading waveforms...
+[INFO] Removing instrument response...
+[INFO] Simulating Wood-Anderson response...
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:179: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[WARN] trace AK.CCB..BHE 单位 'VEL' 未识别，跳过
+[WARN] trace AK.CCB..BHN 单位 'VEL' 未识别，跳过
+[WARN] trace AK.HDA..BHE 单位 'VEL' 未识别，跳过
+[WARN] trace AK.HDA..BHN 单位 'VEL' 未识别，跳过
+[WARN] trace AK.PS08..BHE 单位 'VEL' 未识别，跳过
+[WARN] trace AK.PS08..BHN 单位 'VEL' 未识别，跳过
+[WARN] trace AK.WRH..BHE 单位 'VEL' 未识别，跳过
+[WARN] trace AK.WRH..BHN 单位 'VEL' 未识别，跳过
+[WARN] trace IU.COLA.00.BH1 单位 'VEL' 未识别，跳过
+[WARN] trace IU.COLA.00.BH2 单位 'VEL' 未识别，跳过

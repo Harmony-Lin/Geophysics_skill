@@ -1,0 +1,2 @@
+event_id,time,latitude,longitude,depth_km,magnitude,magnitude_type,n_picks,rms_s,gamma_cov
+ev000001,2024-01-19T21:34:34.594,64.43380636422614,-146.83904628224968,12.559232971456124,,,6,,"{""magnitude"": 999.0, ""sigma_time"": 0.2223276966148391, ""sigma_amp"": 0.0, ""cov_time_amp"": 0.0, ""gamma_score"": 5.907635661168904, ""num_picks"": 6.0, ""num_p_picks"": 3.0, ""num_s_picks"": 3.0}"

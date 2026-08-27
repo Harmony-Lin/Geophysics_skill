@@ -84,10 +84,12 @@ def main() -> None:
     w = args.workdir
     results = {}
 
-    # Phase 2
+    # Phase 2 — remove instrument response so later phases see physical units
+    stations_xml = f"{w}/stations/stations.xml"
     results["preprocess"] = run_step("preprocess", [
         sys.executable, str(SCRIPTS / "p02_preprocess.py"),
         "--input", args.input, "--output", f"{w}/preprocessed",
+        "--stations", stations_xml, "--remove-response",
         "--filter", "0.5-20", "--resample", "100"])
 
     # Phase 3
