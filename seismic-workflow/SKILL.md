@@ -10,7 +10,6 @@ metadata:
   version: 1.0.0
   domain: seismology
 ---
-
 # Seismic Workflow Skill
 
 你是天然地震数据处理操作员。严格按本文件的阶段顺序执行，**不得跳过任何检查点**。
@@ -44,10 +43,11 @@ data/
 ## Phase 0: 环境探测
 
 ```bash
-python scripts/detect_env.py
+python scripts/p00_detect_env.py
 ```
 
 记录 stdout JSON 中：
+
 - `backends.nll` / `backends.hypodd`：是否存在编译型定位程序二进制
 - `packages.pygmt`：是否可用 PyGMT（否则制图回退 Cartopy+Matplotlib）
 - `seisbench_cache`：PhaseNet 权重是否已缓存
@@ -55,29 +55,113 @@ python scripts/detect_env.py
 若 `packages.obspy` 或 `packages.seisbench` 为 false：停止并报告用户缺少依赖，
 提示参考 `docs/install.md`，不要尝试 pip install（零交互原则）。
 
-**检查点 0**：确认 `obspy` 与 `seisbench` 均为 true 后才进入 Phase 1。
+**检查点 0**：确认 `obspy` 与 `seisbench` 均为 true 后，报告用户环境检测通过，才进入 Phase 1。
 
 ---
 
 ## Phase 1: 数据获取
 
+你需要询问用户数据来源，固定询问方式：
+
+“现在让我们来指定需要解析的地震数据。你可以明确告诉我你想要研究的地震事件或告诉我本地波形数据的储存目录。在第一种情况下，我会从FDSN尝试下载相关的地震波形。“
+
 ### 场景 A：从 FDSN 数据中心下载
 
+#### 步骤 1：解析用户提供的地震事件信息
+
+用户可能提供以下任意形式的信息，你需要提取关键参数：
+
+- **事件 ID/编号**：如 USGS `us7000abcd`、EMSC `20240101_123456`、中国地震台网 `20240101123456`
+- **发震时间**：UTC 时间，精确到秒（如 `2024-01-01T12:34:56`）
+- **震中位置**：经纬度（如 `35.6°N, 139.8°E`）或地名（如 "能登半岛"）
+- **震级**：Mw/Ms/Ml 等（如 `Mw 7.6`）
+- **研究目的**：主震定位、余震序列、前震分析、背景噪声等
+
+**若用户仅提供模糊描述（如"2024年能登地震"），必须上网检索权威目录确定精确参数。**
+
+#### 步骤 2：上网检索权威地震目录，确定精确时间区间与空间范围
+
+| 目录平台                      | 访问方式                                                                                           | 适用场景           | 检索关键字段                                                                        |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------- |
+| **USGS ComCat**         | `https://earthquake.usgs.gov/earthquakes/search/` 或 FDSN `event` 服务                         | 全球、M4.5+ 主震   | `eventid`, `time`, `latitude`, `longitude`, `depth`, `mag`, `magType` |
+| **EMSC**                | `https://www.emsc-csem.org/Earthquake/` 或 `https://www.seismicportal.eu/fdsnws/event/1/query` | 欧地中海、全球实时 | `unid`, `time`, `lat`, `lon`, `depth`, `magnitude`                      |
+| **ISC Bulletin**        | `https://www.isc.ac.uk/bulletin/search/`                                                         | 重新定位、参考深度 | `eventId`, `time`, `lat`, `lon`, `depth`, `magnitude`                   |
+| **中国地震台网 (CENC)** | `http://www.ceic.ac.cn/` 或 `http://data.earthquake.cn/fdsnws/event/1/query`                   | 中国及周边区域     | `eventid`, `time`, `latitude`, `longitude`, `depth`, `magnitude`        |
+| **GCMT**                | `https://www.globalcmt.org/`                                                                     | 震源机制、矩张量   | `eventname`, `time`, `lat`, `lon`, `depth`, `Mw`                        |
+
+**检索操作指引（Agent 执行）：**
+
+1. 使用浏览器工具访问上述平台，搜索用户提供的关键词（时间、地名、震级）
+2. 确认**唯一匹配事件**，记录：`event_id`、`origin_time (UTC)`、`lat/lon`、`depth`、`magnitude`、`mag_type`
+3. **确定下载时间窗**：
+   - 主震研究（默认）：`origin_time - 60s` 到 `origin_time + 300s`（含 P/S 波完整波形）
+   - 余震序列（若用户明确指定）：`origin_time - 86400s` (1天前) 到 `origin_time + 7天`，或用户指定时长
+   - 背景噪声/前震：事件前 1-7 天连续波形
+4. **确定空间范围**：以震中为中心，根据震级估算最大关注距离：
+   - M < 4.0：50-100 km
+   - M 4.0-5.5：100-200 km
+   - M 5.5-7.0：200-500 km
+   - M > 7.0：500-1000+ km（考虑面波传播）
+
+#### 步骤 3：选择合适的台网与数据中心
+
+| 目标区域               | 推荐数据中心 (优先级)                                  | 推荐台网代码                                           | 说明                  |
+| ---------------------- | ------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
+| **全球/美国**    | IRIS (1), USGS (2)                                     | `IU`, `II`, `US`, `TA`, `AK`, `CN`, `IU` | GSN/USArray 覆盖全球  |
+| **欧洲/地中海**  | ORFEUS/EIDA (1), GFZ (2), INGV (3)                     | `GE`, `GR`, `HT`, `IV`, `MN`, `Z3`         | 欧洲密集台网          |
+| **中国大陆**     | CENC`http://data.earthquake.cn/fdsnws` (1), IRIS (2) | `CN`, `CD`, `BJ`, `XJ`, `XM`, `HK`         | 中国国家台网+区域台网 |
+| **日本**         | NIED (1), IRIS (2)                                     | `JP`, `JU`, `VU`, `XJ`                         | Hi-net, F-net, K-NET  |
+| **台湾**         | CWB (1), IRIS (2)                                      | `TW`, `TA`, `TP`                                 | 中央气象局台网        |
+| **全球通用备选** | IRIS (聚合全球 FDSN)                                   | `*` (所有可用)                                       | 兜底方案，速度较慢    |
+
+**台网选择策略：**
+
+1. **优先选择目标区域的国家/区域台网**（数据延迟低、响应文件完整）
+2. **补充全球台网 (IU/II/GE)** 用于远场记录和深度约束
+3. **通道选择**：优先 `BH*` (宽频带, 20-100 Hz) > `HH*` (高增益, 100 Hz) > `EH*` (极高增益) > `SH*` (强震)
+4. **避免选择**：临时实验台网 (如 `XA`, `XB` 等，除非用户明确要求)、已知噪声大的台站
+
+#### 步骤 4：构造下载命令
+
 ```bash
-python scripts/fetch_waveforms.py \
-  --network XX --station "*" --channel "HH*" \
-  --start "2024-01-01T00:00:00" --end "2024-01-02T00:00:00" \
+python scripts/p01_fetch_waveforms.py \
+  --network "CN,IU,II" --station "*" --channel "BH*,HH*" \
+  --start "2024-01-01T12:33:00" --end "2024-01-01T12:40:00" \
   --out data/raw --stations-out data/stations \
-  --datacenter IRIS
+  --datacenter IRIS \
+  --min-radius 0 --max-radius 500 \
+  --latitude 37.5 --longitude 137.2
 ```
 
-常用 `--datacenter` 取值：`IRIS`、`USGS`、`INGV`、`GFZ`、`NIED`。
-中国区域数据可指定 `--datacenter http://data.earthquake.cn/fdsnws`（如可访问）。
+**关键参数说明：**
 
-### 场景 B：本地已有波形文件
+- `--network`：逗号分隔的台网代码列表（如 `CN,JP,IU`）
+- `--station`：台站代码，`*` 表示全部；可指定如 `N.AKIH,N.KTKB`
+- `--channel`：通道模式，推荐 `BH*,HH*` 覆盖宽频带和高增益
+- `--start/--end`：UTC 时间，**必须基于步骤 2 确定的精确时间窗**
+- `--min-radius/--max-radius`：震中距范围（度或 km，脚本自动换算），基于步骤 2 估算
+- `--latitude/--longitude`：震中坐标，**必须基于步骤 2 检索的权威坐标**
+- `--datacenter`：按步骤 3 选择；中国区域**首选 CENC FDSN**，海外首选 IRIS
+
+**仪器响应自动下载**：脚本内部使用 `level="response"` 调用 `get_stations()`，**自动下载完整的 StationXML（含仪器响应 Poles/Zeros/Gain/Sensitivity）**，保存为 `data/stations/stations.xml`。Phase 2 的 `--remove-response` 直接读取此文件进行去响应，**无需额外操作**。
+
+常用 `--datacenter` 取值：`IRIS`、`USGS`、`INGV`、`GFZ`、`NIED`、`EIDA`、`CENC` (即 `http://data.earthquake.cn/fdsnws`)。
+
+#### 步骤 5：执行下载并验证
+
+运行上述命令，检查 stdout JSON：
+- `status=="ok"` 且 `n_files>0`、`n_stations>0` → 成功，**同时产出 `data/stations/stations.xml`（含响应）和 `stations.csv`**
+- `error` 含 "no data"：检查时间窗/台网/震中距是否过严，放宽后重试**一次**
+- 网络超时/连接失败：重试**一次**，再次失败后报告用户环境可能离线，建议切换场景 B
+
+**若 StationXML 下载失败**（stdout JSON 无 `stations_xml` 字段或 `n_stations=0`）：
+- Phase 2 仍可运行，但**必须去掉 `--remove-response`**，震级计算 (ML) 将不可用，报告中需注明
+- 事后可手动从数据中心网站下载 StationXML 放入 `data/stations/` 补救
+
+### 场景 B：用户明确指出本地已有波形文件
 
 ```bash
-python scripts/fetch_waveforms.py --from-local <波形目录> \
+python scripts/p01_fetch_waveforms.py --from-local <波形目录> \
   --out data/raw --stations-out data/stations
 ```
 
@@ -86,17 +170,16 @@ python scripts/fetch_waveforms.py --from-local <波形目录> \
 **成功判据**：stdout JSON `status=="ok"` 且 `n_files>0`、`n_stations>0`。
 
 **错误处理**：
+
 - FDSN 报无数据错误（JSON `error` 含 "no data"）：缩小时间窗或台站范围重试一次；仍失败则报告用户。
 - 网络超时：报告用户当前环境可能离线，建议使用场景 B。
 
-**检查点 1**：确认 `data/raw/` 下文件数 = JSON `n_files` 且均 >0 字节后才进入 Phase 2。
-
----
+**检查点 1**：确认 `data/raw/` 下文件数 = JSON `n_files` 且均 >0 字节后，报告用户，才进入 Phase 2。
 
 ## Phase 2: 数据预处理
 
 ```bash
-python scripts/preprocess.py \
+python scripts/p02_preprocess.py \
   --input data/raw --output data/preprocessed \
   --stations data/stations/stations.xml \
   --remove-response --detrend --demean \
@@ -120,7 +203,7 @@ python scripts/preprocess.py \
 ## Phase 3: 震相拾取
 
 ```bash
-python scripts/pick_phases.py \
+python scripts/p03_pick_phases.py \
   --input data/preprocessed \
   --model phasenet \
   --output data/picks/phasenet_picks.csv \
@@ -134,18 +217,19 @@ python scripts/pick_phases.py \
 **成功判据**：`status=="ok"` 且 `n_picks > 0`。
 
 **错误处理**：
+
 - JSON `error` 含 "download"/"cache"：权重离线缺失。请用户将 `~/.cache/seisbench/`
   从有网机器拷贝过来（见 docs/install.md 第 2 节），然后重试一次。
 - `n_picks == 0`：检查 Phase 2 是否误用了不合适的滤波参数；用 `--filter "1-15"` 重跑 Phase 2 后再试一次。
 
-**检查点 3**：确认 `data/picks/phasenet_picks.csv` 存在且行数 ≈ JSON `n_picks + 1`（含表头）后才进入 Phase 4。
+**检查点 3**：确认 `data/picks/phasenet_picks.csv` 存在且行数 ≈ JSON `n_picks + 1`（含表头）后，报告用户，才进入 Phase 4。
 
 ---
 
 ## Phase 4: 震相关联
 
 ```bash
-python scripts/run_association.py \
+python scripts/p04_run_association.py \
   --picks data/picks/phasenet_picks.csv \
   --stations data/stations/stations.csv \
   --config assets/gamma_config.json \
@@ -161,11 +245,12 @@ python scripts/run_association.py \
 **成功判据**：`status=="ok"` 且 `n_events >= 1`。
 
 **错误处理**：
+
 - `n_events == 0`：降低检测阈值——编辑传入的 config 副本，将 `min_picks_per_eq` 从 8 降为 5,
   重试一次；仍为 0 则报告用户（数据信噪比或台站密度不足）。
 - GaMMA 未安装（JSON `error` 含 "gmma"）：报告用户按 docs/install.md 安装，不要跳过此阶段。
 
-**检查点 4**：确认 `data/assoc/events.csv` 存在且 `n_events` 与 CSV 数据行数一致后才进入 Phase 5。
+**检查点 4**：确认 `data/assoc/events.csv` 存在且 `n_events` 与 CSV 数据行数一致后，报告用户，才进入 Phase 5。
 
 ---
 
@@ -176,7 +261,7 @@ python scripts/run_association.py \
 ### 后端 A：NonLinLoc（存在 NLLoc 二进制时，生产环境首选）
 
 ```bash
-bash scripts/run_nll_locate.sh \
+bash scripts/p05_run_nll_locate.sh \
   --events data/assoc/events.csv \
   --picks data/picks/phasenet_picks.csv \
   --stations data/stations/stations.csv \
@@ -191,7 +276,7 @@ bash scripts/run_nll_locate.sh \
 ### 后端 B：纯 Python 网格搜索（无 NLLoc 二进制时的回退）
 
 ```bash
-python scripts/grid_locate.py \
+python scripts/p05_grid_locate.py \
   --events data/assoc/events.csv \
   --picks data/picks/phasenet_picks.csv \
   --stations data/stations/stations.csv \
@@ -214,6 +299,7 @@ python scripts/grid_locate.py \
 ## Phase 6: 相对定位（可选，精定位）
 
 仅当满足以下全部条件才执行，否则直接跳到 Phase 7 并在报告中注明"未做相对定位"：
+
 1. 用户明确要求精定位；
 2. 事件数 ≥ 50；
 3. Phase 0 显示 `backends.hypodd == true`，或用户接受简化版 DD（精度有限）。
@@ -221,7 +307,7 @@ python scripts/grid_locate.py \
 ### 后端 A：HypoDD（Fortran 二进制存在时）
 
 ```bash
-bash scripts/run_hypodd.sh \
+bash scripts/p06_run_hypodd.sh \
   --catalog data/locate/catalog_abs.csv \
   --waveforms data/preprocessed \
   --stations data/stations/stations.csv \
@@ -234,7 +320,7 @@ bash scripts/run_hypodd.sh \
 ### 后端 B：简化版双差（纯 Python 回退）
 
 ```bash
-python scripts/simple_dd.py \
+python scripts/p06_simple_dd.py \
   --catalog data/locate/catalog_abs.csv \
   --waveforms data/preprocessed \
   --stations data/stations/stations.csv \
@@ -255,7 +341,7 @@ python scripts/simple_dd.py \
 ## Phase 7: 震级计算
 
 ```bash
-python scripts/compute_magnitude.py \
+python scripts/p07_compute_magnitude.py \
   --catalog <上一步产出的最终目录CSV> \
   --waveforms data/preprocessed \
   --stations data/stations/stations.xml \
@@ -273,7 +359,7 @@ python scripts/compute_magnitude.py \
 ## Phase 8: 质检与制图
 
 ```bash
-python scripts/qc_and_plot.py \
+python scripts/p08_qc_and_plot.py \
   --catalog data/locate/catalog_final.csv \
   --picks data/picks/phasenet_picks.csv \
   --waveforms data/preprocessed \
@@ -282,6 +368,7 @@ python scripts/qc_and_plot.py \
 ```
 
 产出：
+
 - `epicenter_map.png` 震中分布图（含矢量底图、台站名标注、事件时间+震级标注；
   PyGMT 可用时出版级，否则 Cartopy/Matplotlib 回退）
 - `gr_relation.png` G-R 关系与完整性震级 Mc
@@ -296,10 +383,10 @@ python scripts/qc_and_plot.py \
 
 ---
 
-## 完整流水线一键执行（推荐给确定性要求高的场景）
+## P2-P8完整流水线一键执行（推荐给确定性要求高的场景）
 
 ```bash
-python scripts/run_pipeline.py \
+python scripts/p99_run_pipeline.py \
   --input data/raw --workdir data \
   --skip hypodd   # 可选: none|hypodd|locate
 ```

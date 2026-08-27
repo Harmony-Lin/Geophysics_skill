@@ -86,20 +86,20 @@ def main() -> None:
 
     # Phase 2
     results["preprocess"] = run_step("preprocess", [
-        sys.executable, str(SCRIPTS / "preprocess.py"),
+        sys.executable, str(SCRIPTS / "p02_preprocess.py"),
         "--input", args.input, "--output", f"{w}/preprocessed",
         "--filter", "0.5-20", "--resample", "100"])
 
     # Phase 3
     results["pick"] = run_step("pick", [
-        sys.executable, str(SCRIPTS / "pick_phases.py"),
+        sys.executable, str(SCRIPTS / "p03_pick_phases.py"),
         "--input", f"{w}/preprocessed",
         "--output", f"{w}/picks/phasenet_picks.csv"])
 
     # Phase 4
     stations_csv = f"{w}/stations/stations.csv"
     results["associate"] = run_step("associate", [
-        sys.executable, str(SCRIPTS / "run_association.py"),
+        sys.executable, str(SCRIPTS / "p04_run_association.py"),
         "--picks", f"{w}/picks/phasenet_picks.csv",
         "--stations", stations_csv,
         "--output", f"{w}/assoc/events.csv"])
@@ -109,7 +109,7 @@ def main() -> None:
         import shutil
         if shutil.which("NLLoc"):
             results["locate"] = run_step("locate", [
-                str(SCRIPTS / "run_nll_locate.sh"),
+                str(SCRIPTS / "p05_run_nll_locate.sh"),
                 "--events", f"{w}/assoc/events.csv",
                 "--picks", f"{w}/picks/phasenet_picks.csv",
                 "--stations", stations_csv,
@@ -117,7 +117,7 @@ def main() -> None:
             final_catalog = f"{w}/locate/nll/catalog_abs.csv"
         else:
             results["locate"] = run_step("locate", [
-                sys.executable, str(SCRIPTS / "grid_locate.py"),
+                sys.executable, str(SCRIPTS / "p05_grid_locate.py"),
                 "--events", f"{w}/assoc/events.csv",
                 "--picks", f"{w}/picks/phasenet_picks.csv",
                 "--stations", stations_csv,
@@ -127,7 +127,7 @@ def main() -> None:
         # Phase 6 — optional
         if args.skip != "hypodd" and shutil.which("hypoDD"):
             results["hypodd"] = run_step("hypodd", [
-                str(SCRIPTS / "run_hypodd.sh"),
+                str(SCRIPTS / "p06_run_hypodd.sh"),
                 "--catalog", final_catalog,
                 "--waveforms", f"{w}/preprocessed",
                 "--stations", stations_csv,
@@ -140,7 +140,7 @@ def main() -> None:
 
     # Phase 7
     results["magnitude"] = run_step("magnitude", [
-        sys.executable, str(SCRIPTS / "compute_magnitude.py"),
+        sys.executable, str(SCRIPTS / "p07_compute_magnitude.py"),
         "--catalog", final_catalog,
         "--waveforms", f"{w}/preprocessed",
         "--stations", f"{w}/stations/stations.xml",
@@ -148,7 +148,7 @@ def main() -> None:
 
     # Phase 8
     results["qc"] = run_step("qc", [
-        sys.executable, str(SCRIPTS / "qc_and_plot.py"),
+        sys.executable, str(SCRIPTS / "p08_qc_and_plot.py"),
         "--catalog", f"{w}/locate/catalog_final.csv",
         "--picks", f"{w}/picks/phasenet_picks.csv",
         "--waveforms", f"{w}/preprocessed",
