@@ -7,12 +7,12 @@
 
 ## 1. 验证内容概览
 
-验证脚本在**合成数据**上串接执行 skill 的全部阶段，并对每个检查点做断言：
+验证脚本在**真实波形数据**（2024 Salcha M5.3 地震序列，来自 FDSN 数据中心）上串接执行 skill 的全部阶段，并对每个检查点做断言：
 
 | 检查点 | 阶段 | 断言内容 |
 |--------|------|----------|
 | P0 | 环境探测 | `obspy` 与 `seisbench` 均可用 |
-| P1 | 数据准备 | 合成波形已就位，11 个 miniSEED 文件均非空 |
+| P1 | 数据准备 | 真实波形已就位，miniSEED 文件均非空 |
 | CP2 | 预处理 (P2) | `data/preprocessed/` 产出非空 |
 | CP3 | 拾取 (P3) | picks CSV 行数与 JSON `n_picks` 一致 |
 | CP4 | 关联 (P4) | events CSV 存在且事件数 ≥ 1 |
@@ -43,29 +43,20 @@ P6（HypoDD 相对定位）默认跳过（`--skip hypodd`），因二进制缺�
 > 连带从源码编译 scipy，最终因 Windows 缺 Fortran 编译器而失败。
 > pip 报的 "gmma requires scikit-learn==1.7" 版本冲突警告可忽略。
 
-### 2.2 合成测试数据（默认数据集：2024 Salcha M5.3 地震序列）
+### 2.2 测试数据（默认数据集：2024 Salcha M5.3 地震序列）
 
-验证依赖 `tests/tmp_data/` 下的确定性合成数据，场景取自真实事件：
+验证依赖 `tests/tmp_data/` 下的真实波形数据，场景取自真实事件：
 **2024 年 1 月 19 日阿拉斯加 Salcha Mw 5.3 地震**（USGS 事件号 `ak024vrx24o`）。
-默认数据集参数记录如下（与 `tests/make_synthetic.py` 中常量一致）：
+数据由 `tests/fetch_salcha.py` 从 FDSN 数据中心（EarthScope/IRIS）下载。
 
-| 参数 | 值 |
-|------|-----|
-| 主震 | 2024-01-19 21:34:35.071 UTC, Mw 5.3 (mww) |
-| 震中 | 64.4909°N, 146.9641°W |
-| 深度 | 10.5 km |
-| 余震序列 | 2024-01-19 ~ 02-28，M1.5–4.1 共约 100+ 个，集中于主震 ~6 km 内 |
-| 测试用余震子集 | 10 个 M2.5–3.7 事件（真实 USGS 参数） |
-| 台站 | AK 网络真实坐标 13 台 + IU COLA（HDA/PS08 近台 ~9–13 km；Fairbanks 城区台阵 ~60–90 km） |
-
-若数据不存在，先生成：
+若数据不存在，脚本会自动下载：
 
 ```powershell
-& .venv\Scripts\python.exe tests/make_synthetic.py
+& .venv\Scripts\python.exe tests/fetch_salcha.py
 ```
 
 产出：
-- `tests/tmp_data/raw/event_00..10.mseed` — 11 个事件（主震+10 余震）× 14 台站波形
+- `tests/tmp_data/raw/event_*.mseed` — 各事件 × 台站波形
 - `tests/tmp_data/stations.xml` 与 `tests/tmp_data/stations/stations.csv`
 
 PhaseNet 权重首次运行会自动下载到 `~/.cache/seisbench/`；离线环境请从有网机器拷贝。
@@ -109,7 +100,7 @@ PhaseNet 权重首次运行会自动下载到 `~/.cache/seisbench/`；离线环�
 ```
 verify_ws/
 └── data/
-    ├── raw/              # 从 tmp_data/raw 拷入的合成波形
+    ├── raw/              # 从 tmp_data/raw 拷入的真实波形
     ├── stations/         # stations.xml + stations.csv
     ├── preprocessed/     # P2 预处理后波形
     ├── picks/
@@ -161,9 +152,9 @@ P4 适配要点（GMMA 1.2.17 相对旧版的破坏性变更）：
 引用，触发 AttributeError）。默认配置使用 `BGMM` 方法可正常工作；
 如需用 `GMM` 方法需手动补该属性。
 
-另注意：合成数据每个事件只有 3–4 个台站拾取（PhaseNet 仅可靠拾取 P 波），
+另注意：真实数据中部分事件只有 3–4 个台站拾取（PhaseNet 仅可靠拾取 P 波），
 GaMMA 的多事件区分能力在此稀疏数据上有限，可能只关联出部分事件——
-这不影响"流程贯通"的验证目标，但事件数可能少于合成的 10 个。
+这不影响"流程贯通"的验证目标，但事件数可能少于下载的事件总数。
 
 ## 6. 常见问题
 

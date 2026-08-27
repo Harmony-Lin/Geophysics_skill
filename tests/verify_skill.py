@@ -10,9 +10,12 @@ data center (EarthScope/IRIS) via tests/fetch_salcha.py.
        assoc events, located catalog, final catalog columns,
        qc report.md + 5 PNGs
 
+Every run's full intermediate files and results are saved to
+tests/tmp_data/runs/<YYYYmmdd_HHMMSS>/ (never overwritten).
+
 Usage:
-    python tests/verify_skill.py [--keep] [--synthetic]
-        --synthetic : use offline synthetic fallback instead of real FDSN data
+    python tests/verify_skill.py [--keep]
+        --keep : also keep the scratch workspace tests/tmp_data/verify_ws/
 
 Exit code 0 = all checkpoints pass; prints a JSON summary.
 """
@@ -23,12 +26,15 @@ import json
 import shutil
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "seismic-workflow" / "scripts"
 TMP = Path(__file__).resolve().parent / "tmp_data"
 WS = TMP / "verify_ws"          # scratch workspace (cwd for the pipeline)
+RUN_DIR = TMP / "runs" / datetime.now().strftime("%Y%m%d_%H%M%S")
+                                # per-run archive (kept forever)
 
 CHECKS: list[dict] = []
 
@@ -48,30 +54,18 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--keep", action="store_true",
                     help="keep the scratch workspace after the run")
-    ap.add_argument("--synthetic", action="store_true",
-                    help="use synthetic fallback data instead of real FDSN "
-                         "download (offline mode)")
     args = ap.parse_args()
 
     # --- ensure the default dataset exists -----------------------------
     raw_files = sorted((TMP / "raw").glob("*.mseed"))
-    if not raw_files or args.synthetic:
-        if args.synthetic:
-            print("Using synthetic fallback dataset...")
-            run([sys.executable, ROOT / "tests" / "make_synthetic.py"])
-            # regenerate stations.csv from the synthetic inventory
-            run([sys.executable,
-                 SCRIPTS / "fetch_waveforms.py",
-                 "--xml-to-csv", TMP / "stations.xml",
-                 "--out", TMP / "stations" / "stations.csv"])
-        else:
-            print("Default dataset missing — downloading real Salcha "
-                  "waveforms from FDSN...")
-            proc = run([sys.executable, ROOT / "tests" / "fetch_salcha.py"])
-            if proc.returncode != 0:
-                check("P1 FDSN fetch", False,
-                      f"download failed:\n{proc.stderr[-600:]}")
-                return finish(args.keep)
+    if not raw_files:
+        print("Default dataset missing — downloading real Salcha "
+              "waveforms from FDSN...")
+        proc = run([sys.executable, ROOT / "tests" / "fetch_salcha.py"])
+        if proc.returncode != 0:
+            check("P1 FDSN fetch", False,
+                  f"download failed:\n{proc.stderr[-600:]}")
+            return finish(args.keep)
         raw_files = sorted((TMP / "raw").glob("*.mseed"))
 
     # --- fresh scratch workspace -------------------------------------
@@ -94,7 +88,7 @@ def main() -> int:
     py = sys.executable
 
     # --- Phase 0: environment detection ------------------------------
-    proc = run([py, SCRIPTS / "detect_env.py"], cwd=WS)
+    proc = run([py, SCRIPTS / "p00_detect_env.py"], cwd=WS)
     try:
         env = json.loads(proc.stdout)
     except json.JSONDecodeError:
@@ -104,7 +98,7 @@ def main() -> int:
           f"backends={env.get('backends')}")
 
     # --- Phases 2-8: one-shot pipeline --------------------------------
-    proc = run([py, SCRIPTS / "run_pipeline.py",
+    proc = run([py, SCRIPTS / "p99_run_pipeline.py",
                 "--input", "data/raw", "--workdir", "data",
                 "--skip", "hypodd"], cwd=WS)
     summary = {}
@@ -183,6 +177,20 @@ def finish(keep: bool) -> int:
         "checks": CHECKS,
         "workspace": str(WS) if keep else "(removed)",
     }
+
+    # --- archive the full run output (intermediates + report) ---------
+    saved = None
+    if WS.exists():
+        saved = RUN_DIR
+        if saved.exists():
+            shutil.rmtree(saved)
+        shutil.copytree(WS, saved)
+        # write the JSON summary next to the artifacts
+        (saved / "verify_summary.json").write_text(
+            json.dumps(result, ensure_ascii=False, indent=2),
+            encoding="utf-8")
+    result["saved_to"] = str(saved) if saved else None
+
     if not keep and WS.exists():
         shutil.rmtree(WS, ignore_errors=True)
     print(json.dumps(result, ensure_ascii=False, indent=2))

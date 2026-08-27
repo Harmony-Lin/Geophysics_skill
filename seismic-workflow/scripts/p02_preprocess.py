@@ -66,13 +66,13 @@ def main() -> None:
         n_in += len(st)
         for tr in st:
             try:
-                tr.detrend("linear")
-                tr.detrend("demean")
-                if inventory is not None and args.remove_response:
+                tr.detrend("linear") #去除线性趋势
+                tr.detrend("demean") #去除均值
+                if inventory is not None and args.remove_response: #去仪器响应
                     tr.remove_response(inventory=inventory, output="VEL", water_level=60)
                 elif args.remove_response:
                     tr.remove_response(output="VEL", water_level=60)
-                tr.filter("bandpass", freqmin=f_lo, freqmax=f_hi, corners=4,
+                tr.filter("bandpass", freqmin=f_lo, freqmax=f_hi, corners=4, #带通滤波
                           zerophase=True)
                 # resample via decimation/interpolation to target rate
                 if abs(tr.stats.sampling_rate - args.resample) > 0.01:

@@ -1,3 +1,0 @@
-event_id,time,latitude,longitude,depth_km,magnitude,magnitude_type,n_picks,rms_s,gamma_cov
-ev000001,2024-01-19T21:34:06.673,64.48860028121503,-146.9634380396356,0.0,,,6,,"{""magnitude"": 999.0, ""sigma_time"": 0.5590340746254016, ""sigma_amp"": 0.0, ""cov_time_amp"": 0.0, ""gamma_score"": 13.86407181143652, ""num_picks"": 6.0, ""num_p_picks"": 2.0, ""num_s_picks"": 4.0}"
-ev000002,2024-01-19T21:34:21.523,64.81019705261514,-147.65696873436238,0.0,,,9,,"{""magnitude"": 999.0, ""sigma_time"": 0.4030896489863065, ""sigma_amp"": 0.0, ""cov_time_amp"": 0.0, ""gamma_score"": 9.135928188563481, ""num_picks"": 9.0, ""num_p_picks"": 9.0, ""num_s_picks"": 0.0}"

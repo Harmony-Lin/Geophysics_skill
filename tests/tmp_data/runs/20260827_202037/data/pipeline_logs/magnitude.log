@@ -1,0 +1,13 @@
+{
+  "status": "ok",
+  "magnitude_available": true,
+  "n_events": 1,
+  "n_events_with_magnitude": 1,
+  "median_magnitude": -0.37,
+  "catalog_file": "data\\locate\\catalog_final.csv"
+}
+
+---STDERR---
+[INFO] Loading waveforms and simulating Wood-Anderson...
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:79: UserWarning: Discarding nonzero nanoseconds in conversion.
+  w_start = UTCDateTime(ev_time.to_pydatetime())

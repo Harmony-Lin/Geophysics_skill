@@ -65,6 +65,37 @@ PRE_SECONDS = 30.0    # window start relative to origin
 POST_SECONDS = 180.0  # window end relative to origin
 
 
+def _dedupe_sensors(st):
+    """Keep one 3-component sensor set per station.
+
+    Some stations (e.g. IU.COLA) carry multiple sensor generations: BH* at
+    location code 00 and HH* at location code 10 (and both again at 00).
+    Requesting HH*,BH*,EH* then returns 6-12 channels per station instead
+    of 3.  Keep a single 3-component set per station, preferring the
+    primary location code (00) and the BH band (matches the AK stations).
+    """
+    from collections import defaultdict
+    by_sta = defaultdict(list)
+    for tr in st:
+        by_sta[tr.stats.station].append(tr)
+
+    def _score(tr):
+        # prefer location 00, then BH band, then HH, then EH
+        loc = 0 if tr.stats.location == "00" else 1
+        band = {"B": 0, "H": 1, "E": 2}.get(tr.stats.channel[0], 3)
+        return (loc, band)
+
+    kept = []
+    for sta, traces in by_sta.items():
+        # group by (location, band) -> one 3-component set
+        sets = defaultdict(list)
+        for tr in traces:
+            sets[(tr.stats.location, tr.stats.channel[0])].append(tr)
+        best = min(sets, key=lambda k: _score(sets[k][0]))
+        kept.extend(sets[best])
+    return type(st)(kept)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--datacenter", default="IRIS",
@@ -109,8 +140,11 @@ def main():
         t1 = UTCDateTime(t_iso) + POST_SECONDS
         bulk = []
         for net, sta, *_ in STATIONS:
-            for cha in ("HH*", "BH*", "EH*"):
-                bulk.append((net, sta, "*", cha, t0, t1))
+            # One combined pattern per station: "HH*,BH*,EH*" matches any of
+            # the three families.  Requesting them as separate patterns would
+            # duplicate channels for stations that carry multiple sensor
+            # generations (e.g. IU.COLA has BH* at loc 00 and HH* at loc 10).
+            bulk.append((net, sta, "*", "HH*,BH*,EH*", t0, t1))
         st = None
         for attempt in range(1, 4):  # retry up to 3 times (server hiccups)
             try:
@@ -125,6 +159,7 @@ def main():
         if st is None or len(st) == 0:
             print(f"[WARN] event {k} ({eid}): no data after retries")
             continue
+        st = _dedupe_sensors(st)
         st.merge(method=1, fill_value="interpolate")
         st.trim(starttime=t0, endtime=t1)
         path = RAW / f"event_{k:02d}.mseed"

@@ -1,0 +1,22 @@
+{
+  "status": "ok",
+  "n_traces_input": 90,
+  "n_traces_processed": 90,
+  "n_traces_failed": 0,
+  "failed": [],
+  "filter_hz": [
+    0.5,
+    20.0
+  ],
+  "resample_hz": 100.0,
+  "response_removed": false,
+  "output_dir": "data\\preprocessed"
+}
+
+---STDERR---
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\obspy\signal\filter.py:87: UserWarning: Selected high corner frequency (20.0) of bandpass is at or above Nyquist (20.0). Applying a high-pass instead.
+  warnings.warn(msg)
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\obspy\io\mseed\core.py:1034: UserWarning: The encoding specified in trace.stats.mseed.encoding does not match the dtype of the data.
+A suitable encoding will be chosen.
+  warnings.warn(msg, UserWarning)
+[INFO] Processed 90/90 traces -> data\preprocessed

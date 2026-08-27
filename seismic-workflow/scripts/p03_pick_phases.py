@@ -32,7 +32,7 @@ def main() -> None:
         fail(f"no waveform files under {src}")
 
     try:
-        from seisbench.models import EQTransformer, PhaseNet
+        from seisbench.models import EQTransformer, PhaseNet #import the model
         import torch
     except ImportError as exc:
         fail(f"seisbench/torch unavailable: {exc}",
@@ -66,8 +66,7 @@ def main() -> None:
             continue
         n_traces += len(stream)
         try:
-            # classify() accepts the obspy Stream directly; thresholds are
-            # passed as "<phase>_threshold" kwargs (e.g. P_threshold).
+            # classify() accepts the obspy Stream directly; thresholds are passed as "<phase>_threshold" kwargs (e.g. P_threshold). 此处调用选择的模型
             annotations = model.classify(
                 stream,
                 batch_size=args.batch_size,

@@ -38,6 +38,48 @@ def _annotate_events(ax, catalog, max_labels=30):
                         fontsize=6, color="darkred")
 
 
+def _add_vector_features(ax, lon_min, lon_max, lat_min, lat_max):
+    """叠加 Natural Earth 矢量要素（海岸线、国界、州界、河流、湖泊、
+    道路、城镇），按区域跨度自动选择分辨率（10m/50m/110m）。
+
+    每个要素独立 try/except：下载失败或要素缺失时跳过，不影响成图。
+    """
+    import cartopy.feature as cfeature
+    span = max(lon_max - lon_min, lat_max - lat_min)
+    res = "10m" if span <= 1.0 else ("50m" if span <= 8.0 else "110m")
+
+    def _add(category, name, **kw):
+        try:
+            ax.add_feature(cfeature.NaturalEarthFeature(
+                category, name, res, **kw))
+        except Exception as exc:
+            warn(f"vector feature {name} ({res}) skipped: {exc}")
+
+    # 底色（110m 常量即可，仅作背景）
+    ax.add_feature(cfeature.LAND, facecolor="lightgray", zorder=0)
+    ax.add_feature(cfeature.OCEAN, facecolor="white", zorder=0)
+    # 河流与湖泊
+    _add("physical", "rivers_lake_centerlines",
+         edgecolor="steelblue", facecolor="none", linewidth=0.6, zorder=1)
+    _add("physical", "lakes", facecolor="lightblue",
+         edgecolor="steelblue", linewidth=0.4, zorder=1)
+    # 海岸线
+    _add("physical", "coastline", edgecolor="black",
+         facecolor="none", linewidth=0.6, zorder=2)
+    # 国界与州/省界
+    _add("cultural", "admin_0_boundary_lines_land",
+         edgecolor="gray", facecolor="none", linewidth=0.6, zorder=2)
+    _add("cultural", "admin_1_states_provinces_lines",
+         edgecolor="gray", facecolor="none", linewidth=0.4, zorder=2)
+    # 道路（仅 10m 分辨率提供）
+    if res == "10m":
+        _add("cultural", "roads", edgecolor="darkgray",
+             facecolor="none", linewidth=0.3, zorder=1)
+    # 城镇（点要素，FeatureArtist 不支持 marker 参数，用默认样式）
+    _add("cultural", "populated_places", edgecolor="none",
+         facecolor="none", zorder=2)
+
+
 def plot_epicenter_map(catalog, stations, out_png: Path) -> str:
     """Try PyGMT first; fall back to Cartopy/Matplotlib. Returns backend name."""
     try:
@@ -50,7 +92,8 @@ def plot_epicenter_map(catalog, stations, out_png: Path) -> str:
         fig = pygmt.Figure()
         fig.basemap(region=region, projection="M12c",
                     frame=["af", 'WSne+t"Epicenter distribution"'])
-        fig.coast(land="lightgray", water="white", borders=1, roads="gray")
+        fig.coast(land="lightgray", water="white", borders=1, roads="gray",
+                  rivers=1, lakes=True)
         fig.plot(x=catalog["longitude"], y=catalog["latitude"],
                  style="c0.15c", color="red", pen="black",
                  label="earthquake")
@@ -91,14 +134,19 @@ def plot_epicenter_map(catalog, stations, out_png: Path) -> str:
         fig, ax = plt.subplots(figsize=(9, 8),
                                subplot_kw={"projection": proj})
         ax.set_extent([lon_min, lon_max, lat_min, lat_max], crs=proj)
-        ax.add_feature(cfeature.LAND, facecolor="lightgray")
-        ax.add_feature(cfeature.OCEAN, facecolor="white")
-        ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
-        ax.add_feature(cfeature.BORDERS, linewidth=0.5)
-        ax.add_feature(cfeature.STATES, linewidth=0.4, edgecolor="gray")
-        gl = ax.gridlines(draw_labels=True, linestyle=":",
-                          linewidth=0.4, color="gray")
-        gl.top_labels = gl.right_labels = False
+        _add_vector_features(ax, lon_min, lon_max, lat_min, lat_max)
+        # 注意：不用 cartopy 的 gridlines —— Cartopy 0.25 的 gridliner 在
+        # PlateCarree + 特定 extent 下会触发 "LinearRing do not form a
+        # closed linestring" 的 GEOS 异常，改用普通经纬度刻度。
+        import numpy as _np
+        lon_step = 0.5 if (lon_max - lon_min) <= 4 else 1.0
+        lat_step = 0.5 if (lat_max - lat_min) <= 4 else 1.0
+        ax.set_xticks(_np.arange(_np.floor(lon_min), _np.ceil(lon_max) + 1,
+                                 lon_step))
+        ax.set_yticks(_np.arange(_np.floor(lat_min), _np.ceil(lat_max) + 1,
+                                 lat_step))
+        ax.set_xticklabels([f"{x:.1f}°" for x in ax.get_xticks()])
+        ax.set_yticklabels([f"{y:.1f}°" for y in ax.get_yticks()])
         backend = "cartopy"
     except Exception as exc:
         warn(f"Cartopy unavailable ({exc}); plain Matplotlib map")
