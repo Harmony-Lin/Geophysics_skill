@@ -13,21 +13,55 @@ sys.path.insert(0, str(Path(__file__).parent))
 from common import emit, ensure_dir, fail, load_stations, log, run_main, warn  # noqa: E402
 
 
+def _annotate_events(ax, catalog, max_labels=30):
+    """Annotate event time + magnitude next to each epicenter (subset if many)."""
+    import pandas as pd
+    n = len(catalog)
+    step = max(1, int(np.ceil(n / max_labels)))
+    for i, row in enumerate(catalog.itertuples()):
+        if i % step:
+            continue
+        t = getattr(row, "time", None)
+        t_str = ""
+        if t is not None and not pd.isna(t):
+            try:
+                t_str = str(pd.Timestamp(t).strftime("%m-%d %H:%M"))
+            except Exception:
+                t_str = ""
+        mag = pd.to_numeric(pd.Series([getattr(row, "magnitude", None)]),
+                            errors="coerce").iloc[0]
+        label = " ".join(x for x in (
+            f"M{mag:.1f}" if pd.notna(mag) else "", t_str) if x)
+        if label:
+            ax.annotate(label, (row.longitude, row.latitude),
+                        textcoords="offset points", xytext=(6, 6),
+                        fontsize=6, color="darkred")
+
+
 def plot_epicenter_map(catalog, stations, out_png: Path) -> str:
     """Try PyGMT first; fall back to Cartopy/Matplotlib. Returns backend name."""
     try:
         import pygmt
-        fig = pygmt.Figure()
         region = [
-            catalog["longitude"].min() - 0.5, catalog["longitude"].max() + 0.5,
-            catalog["latitude"].min() - 0.5, catalog["latitude"].max() + 0.5]
-        fig.basemap(region=region, projection="M12c", frame=True)
-        fig.coast(land="lightgray", water="white", borders=1)
+            min(catalog["longitude"].min(), stations["longitude"].min()) - 0.3,
+            max(catalog["longitude"].max(), stations["longitude"].max()) + 0.3,
+            min(catalog["latitude"].min(), stations["latitude"].min()) - 0.3,
+            max(catalog["latitude"].max(), stations["latitude"].max()) + 0.3]
+        fig = pygmt.Figure()
+        fig.basemap(region=region, projection="M12c",
+                    frame=["af", 'WSne+t"Epicenter distribution"'])
+        fig.coast(land="lightgray", water="white", borders=1, roads="gray")
         fig.plot(x=catalog["longitude"], y=catalog["latitude"],
-                 style="c0.15c", color="red", label="earthquake")
+                 style="c0.15c", color="red", pen="black",
+                 label="earthquake")
         fig.plot(x=stations["longitude"], y=stations["latitude"],
-                 style="t0.3c", color="blue", label="station")
-        fig.legend()
+                 style="t0.35c", color="blue", pen="black", label="station")
+        for row in stations.itertuples():
+            fig.text(x=row.longitude, y=row.latitude,
+                     text=getattr(row, "station_code", str(row.station)),
+                     offset="0c/0.45c", font="7p,Helvetica-Bold,blue")
+        _pygmt_event_text(fig, catalog)
+        fig.legend(position="JTR+jTR+o0.2c")
         fig.savefig(str(out_png), dpi=200)
         return "pygmt"
     except Exception as exc:
@@ -36,19 +70,126 @@ def plot_epicenter_map(catalog, stations, out_png: Path) -> str:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(figsize=(8, 7))
-    ax.scatter(catalog["longitude"], catalog["latitude"], c="red", s=12,
-               label="earthquake")
+    import pandas as pd
+
+    def _plain_map():
+        fig, ax = plt.subplots(figsize=(8, 7))
+        return fig, ax, "matplotlib"
+
+    try:
+        import cartopy.crs as ccrs
+        import cartopy.feature as cfeature
+        lon_min = float(min(catalog["longitude"].min(),
+                            stations["longitude"].min())) - 0.3
+        lon_max = float(max(catalog["longitude"].max(),
+                            stations["longitude"].max())) + 0.3
+        lat_min = float(min(catalog["latitude"].min(),
+                            stations["latitude"].min())) - 0.3
+        lat_max = float(max(catalog["latitude"].max(),
+                            stations["latitude"].max())) + 0.3
+        proj = ccrs.PlateCarree()
+        fig, ax = plt.subplots(figsize=(9, 8),
+                               subplot_kw={"projection": proj})
+        ax.set_extent([lon_min, lon_max, lat_min, lat_max], crs=proj)
+        ax.add_feature(cfeature.LAND, facecolor="lightgray")
+        ax.add_feature(cfeature.OCEAN, facecolor="white")
+        ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
+        ax.add_feature(cfeature.BORDERS, linewidth=0.5)
+        ax.add_feature(cfeature.STATES, linewidth=0.4, edgecolor="gray")
+        gl = ax.gridlines(draw_labels=True, linestyle=":",
+                          linewidth=0.4, color="gray")
+        gl.top_labels = gl.right_labels = False
+        backend = "cartopy"
+    except Exception as exc:
+        warn(f"Cartopy unavailable ({exc}); plain Matplotlib map")
+        fig, ax, backend = _plain_map()
+
+    sc = ax.scatter(catalog["longitude"], catalog["latitude"],
+                    c=pd.to_numeric(catalog.get("magnitude"),
+                                    errors="coerce").fillna(0.0),
+                    cmap="YlOrRd", edgecolors="black", linewidths=0.3,
+                    s=12 + 8 * pd.to_numeric(
+                        catalog.get("magnitude"), errors="coerce").fillna(0.0),
+                    label="earthquake", zorder=3)
     ax.scatter(stations["longitude"], stations["latitude"], marker="^",
-               c="blue", s=40, label="station")
+               c="blue", s=50, edgecolors="black", linewidths=0.4,
+               label="station", zorder=4)
+    for row in stations.itertuples():
+        code = getattr(row, "station_code", str(row.station))
+        ax.annotate(code, (row.longitude, row.latitude),
+                    textcoords="offset points", xytext=(0, 7),
+                    ha="center", fontsize=7, color="blue", zorder=5)
+    _annotate_events(ax, catalog)
+    try:
+        fig.colorbar(sc, ax=ax, shrink=0.7, label="Magnitude")
+    except Exception:
+        pass
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
     ax.set_title("Epicenter distribution")
-    ax.legend()
+    ax.legend(loc="upper left")
     fig.tight_layout()
-    fig.savefig(out_png, dpi=200)
+    try:
+        fig.savefig(out_png, dpi=200)
+    except Exception as exc:
+        # Cartopy can fail at draw time (e.g. shapely gridliner issues);
+        # retry once with a plain Matplotlib axes.
+        warn(f"Cartopy render failed ({exc}); retrying with plain Matplotlib")
+        plt.close(fig)
+        fig, ax, backend = _plain_map()
+        sc = ax.scatter(catalog["longitude"], catalog["latitude"],
+                        c=pd.to_numeric(catalog.get("magnitude"),
+                                        errors="coerce").fillna(0.0),
+                        cmap="YlOrRd", edgecolors="black", linewidths=0.3,
+                        s=12 + 8 * pd.to_numeric(
+                            catalog.get("magnitude"),
+                            errors="coerce").fillna(0.0),
+                        label="earthquake", zorder=3)
+        ax.scatter(stations["longitude"], stations["latitude"], marker="^",
+                   c="blue", s=50, edgecolors="black", linewidths=0.4,
+                   label="station", zorder=4)
+        for row in stations.itertuples():
+            code = getattr(row, "station_code", str(row.station))
+            ax.annotate(code, (row.longitude, row.latitude),
+                        textcoords="offset points", xytext=(0, 7),
+                        ha="center", fontsize=7, color="blue", zorder=5)
+        _annotate_events(ax, catalog)
+        try:
+            fig.colorbar(sc, ax=ax, shrink=0.7, label="Magnitude")
+        except Exception:
+            pass
+        ax.set_xlabel("Longitude")
+        ax.set_ylabel("Latitude")
+        ax.set_title("Epicenter distribution")
+        ax.legend(loc="upper left")
+        fig.tight_layout()
+        fig.savefig(out_png, dpi=200)
     plt.close(fig)
-    return "matplotlib"
+    return backend
+
+
+def _pygmt_event_text(fig, catalog, max_labels=30):
+    """Annotate event time+magnitude on a PyGMT figure (subset if many)."""
+    import pandas as pd
+    n = len(catalog)
+    step = max(1, int(np.ceil(n / max_labels)))
+    for i, row in enumerate(catalog.itertuples()):
+        if i % step:
+            continue
+        t = getattr(row, "time", None)
+        t_str = ""
+        if t is not None and not pd.isna(t):
+            try:
+                t_str = str(pd.Timestamp(t).strftime("%m-%d %H:%M"))
+            except Exception:
+                t_str = ""
+        mag = pd.to_numeric(pd.Series([getattr(row, "magnitude", None)]),
+                            errors="coerce").iloc[0]
+        label = " ".join(x for x in (
+            f"M{mag:.1f}" if pd.notna(mag) else "", t_str) if x)
+        if label:
+            fig.text(x=row.longitude, y=row.latitude, text=label,
+                     offset="0.15c/0.15c", font="6p,Helvetica,darkred")
 
 
 def plot_gr(catalog, out_png: Path):
@@ -127,10 +268,116 @@ def plot_residuals(catalog, out_png: Path):
             "median_rms_s": round(float(rms.median()), 4)}
 
 
+def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
+                      n_events: int = 4, window_s: float = 60.0) -> dict | None:
+    """Phase 3 sample figure: waveforms with PhaseNet picks overlaid.
+
+    Selects a few events (by pick-time clustering), plots the vertical
+    traces of the stations that picked them, and marks P (red) / S (blue)
+    pick times. Only a representative sample is drawn, not all events.
+    """
+    import pandas as pd
+    picks = pd.read_csv(picks_csv)
+    if len(picks) == 0:
+        warn("no picks — skipping pick sample plot")
+        return None
+
+    from obspy import read, UTCDateTime
+
+    picks["time"] = pd.to_datetime(picks["time"], errors="coerce",
+                                   format="mixed", utc=True)
+    picks = picks.dropna(subset=["time"])
+    if len(picks) == 0:
+        warn("no parseable pick times — skipping pick sample plot")
+        return None
+
+    # cluster picks into events by gaps > 120 s in pick time
+    picks = picks.sort_values("time").reset_index(drop=True)
+    gap = pd.Timedelta(seconds=120)
+    picks["event"] = (picks["time"].diff() > gap).cumsum()
+    order = (picks.groupby("event")["time"].min()
+             .sort_values().index.tolist())
+    # prefer the largest-magnitude-looking events: most picks per event
+    sel = sorted(order, key=lambda e: -len(picks[picks.event == e]))[:n_events]
+    sel = [order.index(e) for e in sorted(sel)]
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    files = sorted(Path(waveform_dir).rglob("*.mseed")) + \
+            sorted(Path(waveform_dir).rglob("*.miniseed"))
+    streams = {}
+    for f in files:
+        try:
+            st = read(str(f), headonly=False)
+            for tr in st:
+                streams.setdefault(tr.id, []).append(tr)
+        except Exception as exc:
+            warn(f"unreadable waveform skipped: {f.name} ({exc})")
+
+    n_rows = sum(len(sel) and 1 for _ in sel)
+    fig, axes = plt.subplots(n_rows, 1, figsize=(11, 2.6 * n_rows),
+                             squeeze=False)
+
+    info = {"events_plotted": 0, "picks_plotted": 0}
+    for r, ev_idx in enumerate(sel):
+        ax = axes[r][0]
+        ev = picks[picks.event == order[ev_idx]]
+        t0 = ev["time"].min()
+        plotted = False
+        for row in ev.itertuples():
+            trace_id = str(row.station)
+            cands = [trs for tid, lst in streams.items()
+                     if tid.split(".")[1] == trace_id.split(".")[1]
+                     for trs in lst]
+            if not cands:
+                continue
+            tr = cands[0]
+            delta = (pd.Timestamp(tr.stats.starttime.datetime).tz_localize("UTC")
+                     - t0).total_seconds()
+            tt = np.arange(tr.stats.npts) / tr.stats.sampling_rate + delta
+            m = (tt >= -5) & (tt <= window_s)
+            if not m.any():
+                continue
+            ax.plot(tt[m], tr.data[m], lw=0.7, color="black")
+            plotted = True
+            break  # one representative trace per event keeps the figure clean
+        for prow in ev.itertuples():
+            dt = (prow.time - t0).total_seconds()
+            if dt < -5 or dt > window_s:
+                continue
+            color = "red" if str(prow.phase).upper().startswith("P") else "blue"
+            ax.axvline(dt, color=color, lw=1.0, alpha=0.8)
+            info["picks_plotted"] += 1
+        ax.set_xlim(-5, window_s)
+        ax.set_ylabel("counts")
+        mag_txt = ""
+        ax.set_title(
+            f"event {ev_idx + 1}: origin≈{t0.strftime('%Y-%m-%d %H:%M:%S')} UTC"
+            f"  ({len(ev)} picks){mag_txt}", fontsize=9, loc="left")
+        if plotted:
+            info["events_plotted"] += 1
+
+    from matplotlib.lines import Line2D
+    handles = [Line2D([], [], color="red", lw=1.2, label="P pick"),
+               Line2D([], [], color="blue", lw=1.2, label="S pick")]
+    axes[-1][0].set_xlabel("Time since first pick (s)")
+    fig.legend(handles=handles, loc="upper right", ncol=2)
+    fig.suptitle("PhaseNet picking samples (Phase 3)", fontsize=12)
+    fig.tight_layout(rect=(0, 0, 1, 0.96))
+    fig.savefig(out_png, dpi=200)
+    plt.close(fig)
+    return info
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Phase 8: QC plots and report")
     parser.add_argument("--catalog", required=True)
     parser.add_argument("--picks", help="picks CSV (optional)")
+    parser.add_argument("--waveforms", dest="waveforms",
+                        default="data/preprocessed",
+                        help="preprocessed waveform dir for pick sample plot")
     parser.add_argument("--stations", required=True)
     parser.add_argument("--output-dir", dest="output_dir", required=True)
     parser.add_argument("--backend-note", dest="backend_note", default="")
@@ -153,6 +400,17 @@ def main() -> None:
 
     log("Plotting residuals...")
     res = plot_residuals(catalog, outdir / "residuals.png")
+
+    pick_info = None
+    if args.picks and Path(args.picks).exists():
+        log("Plotting PhaseNet picking samples...")
+        try:
+            pick_info = plot_pick_samples(args.picks, args.waveforms,
+                                          outdir / "pick_samples.png")
+        except Exception as exc:
+            warn(f"pick sample plot failed: {exc}")
+    else:
+        warn("--picks not given or missing; skipping pick sample plot")
 
     report_path = outdir / "report.md"
     mag_series = pd.to_numeric(catalog.get("magnitude"), errors="coerce").dropna()
@@ -177,6 +435,7 @@ def main() -> None:
 ![G-R关系](gr_relation.png)
 ![深度分布](depth_histogram.png)
 ![走时残差](residuals.png)
+![拾取样例](pick_samples.png)
 
 ## 注意事项
 - 若未做仪器响应去除，ML 震级不可用（见 Phase 2/7 说明）。
@@ -193,7 +452,8 @@ def main() -> None:
         "mean_rms_s": res["mean_rms_s"] if res else None,
         "report_file": str(report_path),
         "plots": ["epicenter_map.png", "gr_relation.png",
-                  "depth_histogram.png", "residuals.png"],
+                  "depth_histogram.png", "residuals.png", "pick_samples.png"],
+        "pick_samples": pick_info,
     })
 
 

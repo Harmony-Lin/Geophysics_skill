@@ -22,20 +22,30 @@ def parse_last_json(text: str) -> dict:
     """Extract the last complete JSON object from mixed stdout.
 
     Some libraries (e.g. GaMMA) print progress lines to stdout, polluting
-    the JSON contract; scan for the last balanced {...} block.
+    the JSON contract; find the OUTERMOST/LONGEST {...} block that parses.
     """
     if not text or not text.strip():
         return {}
     decoder = json.JSONDecoder()
-    for idx in range(len(text) - 1, -1, -1):
+    candidates = []
+    
+    # Find all valid JSON objects starting from each "{" position
+    for idx in range(len(text)):
         if text[idx] != "{":
             continue
         try:
             obj, end = decoder.raw_decode(text[idx:])
-            return obj
+            # Track (position, length, object) to find the outermost one
+            obj_text = text[idx:idx + end]
+            candidates.append((idx, end, obj))
         except json.JSONDecodeError:
             continue
-    return {}
+    
+    if not candidates:
+        return {}
+    
+    # Return the object with the longest span (outermost/topmost)
+    return max(candidates, key=lambda x: x[1])[2]
 
 
 def run_step(name: str, cmd: list[str]) -> dict:
@@ -140,6 +150,8 @@ def main() -> None:
     results["qc"] = run_step("qc", [
         sys.executable, str(SCRIPTS / "qc_and_plot.py"),
         "--catalog", f"{w}/locate/catalog_final.csv",
+        "--picks", f"{w}/picks/phasenet_picks.csv",
+        "--waveforms", f"{w}/preprocessed",
         "--stations", stations_csv,
         "--output-dir", f"{w}/qc"])
 

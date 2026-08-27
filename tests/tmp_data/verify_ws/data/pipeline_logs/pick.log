@@ -1,0 +1,16 @@
+{
+  "status": "ok",
+  "model": "phasenet",
+  "device": "cpu",
+  "n_files": 11,
+  "n_traces": 154,
+  "n_picks": 23,
+  "n_p_picks": 12,
+  "n_s_picks": 11,
+  "picks_file": "data\\picks\\phasenet_picks.csv"
+}
+
+---STDERR---
+[INFO] Loading phasenet model (device=cpu)...
+[INFO] [10/11] files processed, 23 picks so far...
+[WARN] CPU mode: expect 5-10x slower than GPU

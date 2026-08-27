@@ -1,0 +1,235 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<FDSNStationXML xmlns="http://www.fdsn.org/xml/station/1" schemaVersion="1.2">
+  <Source>salcha-synthetic-test</Source>
+  <Module>ObsPy 1.5.0</Module>
+  <ModuleURI>https://www.obspy.org</ModuleURI>
+  <Created>2026-08-26T14:22:32.185125Z</Created>
+  <Network code="AK">
+    <Station code="HDA">
+      <Latitude unit="DEGREES">64.4091</Latitude>
+      <Longitude unit="DEGREES">-146.9482</Longitude>
+      <Elevation unit="METERS">437.0</Elevation>
+      <Site>
+        <Name>Harding Lake</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.184587Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.4091</Latitude>
+        <Longitude unit="DEGREES">-146.9482</Longitude>
+        <Elevation unit="METERS">437.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="PS08">
+      <Latitude unit="DEGREES">64.5422</Latitude>
+      <Longitude unit="DEGREES">-146.8221</Longitude>
+      <Elevation unit="METERS">320.0</Elevation>
+      <Site>
+        <Name>TAPS Pump Station 8</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.184679Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.5422</Latitude>
+        <Longitude unit="DEGREES">-146.8221</Longitude>
+        <Elevation unit="METERS">320.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="CCB">
+      <Latitude unit="DEGREES">64.6453</Latitude>
+      <Longitude unit="DEGREES">-147.8053</Longitude>
+      <Elevation unit="METERS">233.0</Elevation>
+      <Site>
+        <Name>Clear Creek Butte</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.184723Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.6453</Latitude>
+        <Longitude unit="DEGREES">-147.8053</Longitude>
+        <Elevation unit="METERS">233.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="WRH">
+      <Latitude unit="DEGREES">64.4716</Latitude>
+      <Longitude unit="DEGREES">-148.0918</Longitude>
+      <Elevation unit="METERS">329.0</Elevation>
+      <Site>
+        <Name>Wood River Hill</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.184757Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.4716</Latitude>
+        <Longitude unit="DEGREES">-148.0918</Longitude>
+        <Elevation unit="METERS">329.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="FA01">
+      <Latitude unit="DEGREES">64.8348</Latitude>
+      <Longitude unit="DEGREES">-147.9371</Longitude>
+      <Elevation unit="METERS">263.0</Elevation>
+      <Site>
+        <Name>Chena-GS Fire Station</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.184789Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.8348</Latitude>
+        <Longitude unit="DEGREES">-147.9371</Longitude>
+        <Elevation unit="METERS">263.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="FA05">
+      <Latitude unit="DEGREES">64.8393</Latitude>
+      <Longitude unit="DEGREES">-147.7516</Longitude>
+      <Elevation unit="METERS">135.0</Elevation>
+      <Site>
+        <Name>Denali Elem. School</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.184830Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.8393</Latitude>
+        <Longitude unit="DEGREES">-147.7516</Longitude>
+        <Elevation unit="METERS">135.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="FA06">
+      <Latitude unit="DEGREES">64.8461</Latitude>
+      <Longitude unit="DEGREES">-147.6957</Longitude>
+      <Elevation unit="METERS">136.0</Elevation>
+      <Site>
+        <Name>Nordale Education Center</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.184864Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.8461</Latitude>
+        <Longitude unit="DEGREES">-147.6957</Longitude>
+        <Elevation unit="METERS">136.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="FA07">
+      <Latitude unit="DEGREES">64.8267</Latitude>
+      <Longitude unit="DEGREES">-147.6946</Longitude>
+      <Elevation unit="METERS">135.0</Elevation>
+      <Site>
+        <Name>Arctic Light Elem. School</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.184892Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.8267</Latitude>
+        <Longitude unit="DEGREES">-147.6946</Longitude>
+        <Elevation unit="METERS">135.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="FA09">
+      <Latitude unit="DEGREES">64.8377</Latitude>
+      <Longitude unit="DEGREES">-147.8172</Longitude>
+      <Elevation unit="METERS">135.0</Elevation>
+      <Site>
+        <Name>DNR Fairbanks</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.184920Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.8377</Latitude>
+        <Longitude unit="DEGREES">-147.8172</Longitude>
+        <Elevation unit="METERS">135.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="FA10">
+      <Latitude unit="DEGREES">64.8186</Latitude>
+      <Longitude unit="DEGREES">-147.7784</Longitude>
+      <Elevation unit="METERS">133.0</Elevation>
+      <Site>
+        <Name>Bus Barn</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.184951Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.8186</Latitude>
+        <Longitude unit="DEGREES">-147.7784</Longitude>
+        <Elevation unit="METERS">133.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="GIB">
+      <Latitude unit="DEGREES">64.8598</Latitude>
+      <Longitude unit="DEGREES">-147.8491</Longitude>
+      <Elevation unit="METERS">180.0</Elevation>
+      <Site>
+        <Name>Geophysical Institute</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.184978Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.8598</Latitude>
+        <Longitude unit="DEGREES">-147.8491</Longitude>
+        <Elevation unit="METERS">180.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="TAPE">
+      <Latitude unit="DEGREES">64.8928</Latitude>
+      <Longitude unit="DEGREES">-147.789</Longitude>
+      <Elevation unit="METERS">320.0</Elevation>
+      <Site>
+        <Name>Goshawk Ln</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.185009Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.8928</Latitude>
+        <Longitude unit="DEGREES">-147.789</Longitude>
+        <Elevation unit="METERS">320.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+    <Station code="UAFE">
+      <Latitude unit="DEGREES">64.8553</Latitude>
+      <Longitude unit="DEGREES">-147.8181</Longitude>
+      <Elevation unit="METERS">184.0</Elevation>
+      <Site>
+        <Name>UAF Engineering Array</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.185037Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.8553</Latitude>
+        <Longitude unit="DEGREES">-147.8181</Longitude>
+        <Elevation unit="METERS">184.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+  </Network>
+  <Network code="IU">
+    <Station code="COLA">
+      <Latitude unit="DEGREES">64.8736</Latitude>
+      <Longitude unit="DEGREES">-147.8618</Longitude>
+      <Elevation unit="METERS">200.0</Elevation>
+      <Site>
+        <Name>College Outpost</Name>
+      </Site>
+      <CreationDate>2026-08-26T14:22:32.185067Z</CreationDate>
+      <Channel code="HHZ" locationCode="">
+        <Latitude unit="DEGREES">64.8736</Latitude>
+        <Longitude unit="DEGREES">-147.8618</Longitude>
+        <Elevation unit="METERS">200.0</Elevation>
+        <Depth unit="METERS">0.0</Depth>
+        <SampleRate>100.0</SampleRate>
+      </Channel>
+    </Station>
+  </Network>
+</FDSNStationXML>

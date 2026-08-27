@@ -1,15 +1,18 @@
 """Minimal end-to-end verification of the seismic-workflow skill.
 
-Follows SKILL.md checkpoints 0-8 on synthetic data:
+Follows SKILL.md checkpoints 0-8 on the default test dataset: REAL waveforms
+of the 2024 Salcha (Alaska) M5.3 earthquake sequence downloaded from an FDSN
+data center (EarthScope/IRIS) via tests/fetch_salcha.py.
 
   0. detect_env.py        -> obspy & seisbench available
-  1. raw waveforms staged -> n_files > 0
+  1. raw waveforms staged -> n_files > 0 (real FDSN data; fetched if absent)
   2-8. run_pipeline.py    -> checkpoints: preprocessed/, picks CSV,
        assoc events, located catalog, final catalog columns,
-       qc report.md + 4 PNGs
+       qc report.md + 5 PNGs
 
 Usage:
-    python tests/verify_skill.py [--keep]
+    python tests/verify_skill.py [--keep] [--synthetic]
+        --synthetic : use offline synthetic fallback instead of real FDSN data
 
 Exit code 0 = all checkpoints pass; prints a JSON summary.
 """
@@ -45,7 +48,31 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--keep", action="store_true",
                     help="keep the scratch workspace after the run")
+    ap.add_argument("--synthetic", action="store_true",
+                    help="use synthetic fallback data instead of real FDSN "
+                         "download (offline mode)")
     args = ap.parse_args()
+
+    # --- ensure the default dataset exists -----------------------------
+    raw_files = sorted((TMP / "raw").glob("*.mseed"))
+    if not raw_files or args.synthetic:
+        if args.synthetic:
+            print("Using synthetic fallback dataset...")
+            run([sys.executable, ROOT / "tests" / "make_synthetic.py"])
+            # regenerate stations.csv from the synthetic inventory
+            run([sys.executable,
+                 SCRIPTS / "fetch_waveforms.py",
+                 "--xml-to-csv", TMP / "stations.xml",
+                 "--out", TMP / "stations" / "stations.csv"])
+        else:
+            print("Default dataset missing — downloading real Salcha "
+                  "waveforms from FDSN...")
+            proc = run([sys.executable, ROOT / "tests" / "fetch_salcha.py"])
+            if proc.returncode != 0:
+                check("P1 FDSN fetch", False,
+                      f"download failed:\n{proc.stderr[-600:]}")
+                return finish(args.keep)
+        raw_files = sorted((TMP / "raw").glob("*.mseed"))
 
     # --- fresh scratch workspace -------------------------------------
     if WS.exists():
@@ -53,8 +80,7 @@ def main() -> int:
     (WS / "data" / "raw").mkdir(parents=True)
     (WS / "data" / "stations").mkdir(parents=True)
 
-    # Checkpoint 1: stage synthetic raw waveforms + station metadata
-    raw_files = sorted((TMP / "raw").glob("*.mseed"))
+    # Checkpoint 1: stage raw waveforms + station metadata
     for f in raw_files:
         shutil.copy2(f, WS / "data" / "raw")
     shutil.copy2(TMP / "stations.xml", WS / "data" / "stations" / "stations.xml")
@@ -139,10 +165,10 @@ def main() -> int:
     check("CP7 final catalog", final_csv.exists() and have and mag_ok,
           f"columns={cols}")
 
-    # Checkpoint 8: qc report + 4 figures
+    # Checkpoint 8: qc report + 5 figures (incl. pick_samples.png)
     qc = d / "qc"
     pngs = sorted(qc.glob("*.png"))
-    check("CP8 qc artifacts", (qc / "report.md").exists() and len(pngs) >= 4,
+    check("CP8 qc artifacts", (qc / "report.md").exists() and len(pngs) >= 5,
           f"{len(pngs)} PNGs + report.md={'yes' if (qc/'report.md').exists() else 'no'}")
 
     return finish(args.keep)

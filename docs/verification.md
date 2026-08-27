@@ -12,13 +12,13 @@
 | 检查点 | 阶段 | 断言内容 |
 |--------|------|----------|
 | P0 | 环境探测 | `obspy` 与 `seisbench` 均可用 |
-| P1 | 数据准备 | 合成波形已就位，10 个 miniSEED 文件均非空 |
+| P1 | 数据准备 | 合成波形已就位，11 个 miniSEED 文件均非空 |
 | CP2 | 预处理 (P2) | `data/preprocessed/` 产出非空 |
 | CP3 | 拾取 (P3) | picks CSV 行数与 JSON `n_picks` 一致 |
 | CP4 | 关联 (P4) | events CSV 存在且事件数 ≥ 1 |
 | CP5 | 定位 (P5) | 定位成功数 ≥ 关联事件数的 50% |
 | CP7 | 震级 (P7) | 最终目录含 lat/lon/depth 列 |
-| CP8 | 质检 (P8) | `report.md` + ≥4 张 PNG 图件 |
+| CP8 | 质检 (P8) | `report.md` + ≥5 张 PNG 图件（含拾取样例图） |
 
 P6（HypoDD 相对定位）默认跳过（`--skip hypodd`），因二进制缺失时自动回退。
 
@@ -43,16 +43,29 @@ P6（HypoDD 相对定位）默认跳过（`--skip hypodd`），因二进制缺�
 > 连带从源码编译 scipy，最终因 Windows 缺 Fortran 编译器而失败。
 > pip 报的 "gmma requires scikit-learn==1.7" 版本冲突警告可忽略。
 
-### 2.2 合成测试数据
+### 2.2 合成测试数据（默认数据集：2024 Salcha M5.3 地震序列）
 
-验证依赖 `tests/tmp_data/` 下的确定性合成数据。若不存在，先生成：
+验证依赖 `tests/tmp_data/` 下的确定性合成数据，场景取自真实事件：
+**2024 年 1 月 19 日阿拉斯加 Salcha Mw 5.3 地震**（USGS 事件号 `ak024vrx24o`）。
+默认数据集参数记录如下（与 `tests/make_synthetic.py` 中常量一致）：
+
+| 参数 | 值 |
+|------|-----|
+| 主震 | 2024-01-19 21:34:35.071 UTC, Mw 5.3 (mww) |
+| 震中 | 64.4909°N, 146.9641°W |
+| 深度 | 10.5 km |
+| 余震序列 | 2024-01-19 ~ 02-28，M1.5–4.1 共约 100+ 个，集中于主震 ~6 km 内 |
+| 测试用余震子集 | 10 个 M2.5–3.7 事件（真实 USGS 参数） |
+| 台站 | AK 网络真实坐标 13 台 + IU COLA（HDA/PS08 近台 ~9–13 km；Fairbanks 城区台阵 ~60–90 km） |
+
+若数据不存在，先生成：
 
 ```powershell
 & .venv\Scripts\python.exe tests/make_synthetic.py
 ```
 
 产出：
-- `tests/tmp_data/raw/event_00..09.mseed` — 10 个事件 × 4 台站波形
+- `tests/tmp_data/raw/event_00..10.mseed` — 11 个事件（主震+10 余震）× 14 台站波形
 - `tests/tmp_data/stations.xml` 与 `tests/tmp_data/stations/stations.csv`
 
 PhaseNet 权重首次运行会自动下载到 `~/.cache/seisbench/`；离线环境请从有网机器拷贝。

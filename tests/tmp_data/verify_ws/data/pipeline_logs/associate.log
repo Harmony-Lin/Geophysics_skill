@@ -1,0 +1,15 @@
+Associating 23 picks with 1 CPUs
+.{
+  "status": "ok",
+  "n_picks_input": 23,
+  "n_events": 2,
+  "events_file": "data\\assoc\\events.csv",
+  "config_used": "C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\assets\\gamma_config.json"
+}
+
+---STDERR---
+[INFO] Loaded GaMMA config from C:\Users\Admin\Desktop\Geophysics\seismic-workflow\assets\gamma_config.json
+[INFO] Associating 23 picks across 14 stations...
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+[INFO] Found 2 candidate events

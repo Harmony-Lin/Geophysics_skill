@@ -1,0 +1,20 @@
+{
+  "status": "ok",
+  "n_traces_input": 154,
+  "n_traces_processed": 154,
+  "n_traces_failed": 0,
+  "failed": [],
+  "filter_hz": [
+    0.5,
+    20.0
+  ],
+  "resample_hz": 100.0,
+  "response_removed": false,
+  "output_dir": "data\\preprocessed"
+}
+
+---STDERR---
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\obspy\io\mseed\core.py:1034: UserWarning: The encoding specified in trace.stats.mseed.encoding does not match the dtype of the data.
+A suitable encoding will be chosen.
+  warnings.warn(msg, UserWarning)
+[INFO] Processed 154/154 traces -> data\preprocessed

@@ -276,18 +276,22 @@ python scripts/compute_magnitude.py \
 python scripts/qc_and_plot.py \
   --catalog data/locate/catalog_final.csv \
   --picks data/picks/phasenet_picks.csv \
+  --waveforms data/preprocessed \
   --stations data/stations/stations.csv \
   --output-dir data/qc
 ```
 
 产出：
-- `epicenter_map.png` 震中分布图（PyGMT 可用时出版级，否则 Cartopy/Matplotlib）
+- `epicenter_map.png` 震中分布图（含矢量底图、台站名标注、事件时间+震级标注；
+  PyGMT 可用时出版级，否则 Cartopy/Matplotlib 回退）
 - `gr_relation.png` G-R 关系与完整性震级 Mc
 - `depth_histogram.png` 深度分布直方图
 - `residuals.png` 走时残差分布
+- `pick_samples.png` Phase 3 拾取样例图：选取拾取数最多的若干事件，
+  叠加显示波形与 P/S 拾取竖线（样例数量有限，非全部事件）
 - `report.md` 处理报告（基于 `assets/report_template.md`）
 
-**检查点 8**：确认 `data/qc/report.md` 存在且引用的四张 PNG 均存在后，向用户汇报：
+**检查点 8**：确认 `data/qc/report.md` 存在且引用的五张 PNG 均存在后，向用户汇报：
 事件总数、Mc、平均走时残差、使用的定位后端、以及任何 warning。
 
 ---
