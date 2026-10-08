@@ -4,7 +4,7 @@
   <Sender>EarthScope</Sender>
   <Module>EarthScope WEB SERVICE: fdsnws-station | version: 1.1.56</Module>
   <ModuleURI>https://service.earthscope.org/fdsnws/station/1/query?starttime=2024-01-19T21%3A34%3A05.071000&amp;endtime=2024-01-19T21%3A55%3A45.997000&amp;network=AK%2CIU&amp;station=HDA%2CPS08%2CCCB%2CWRH%2CFA01%2CFA05%2CFA06%2CFA07%2CFA09%2CFA10%2CGIB%2CTAPE%2CUAFE%2CCOLA&amp;channel=HH%2A%2CBH%2A%2CEH%2A&amp;level=response</ModuleURI>
-  <Created>2026-08-27T12:20:39.614100Z</Created>
+  <Created>2026-08-27T17:49:32.279300Z</Created>
   <Network code="AK" startDate="1987-01-01T00:00:00.000000Z" restrictedStatus="open">
     <Description>Alaska Regional Network ()</Description>
     <Identifier type="DOI">10.7914/SN/AK

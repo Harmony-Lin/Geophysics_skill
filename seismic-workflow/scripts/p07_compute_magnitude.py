@@ -90,8 +90,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Phase 7: compute ML magnitudes (Wood-Anderson)")
     parser.add_argument("--catalog", required=True, help="located catalog CSV")
-    parser.add_argument("--waveforms", required=True)
-    parser.add_argument("--stations", help="StationXML with response")
+    parser.add_argument("--waveforms", required=True)#这个waveform在传值的时候传的是raw还是processed？
+    parser.add_argument("--stations", help="StationXML with response") #使用仪器响应文件来模拟WA地震仪的相应，得到ML震级
     parser.add_argument("--output", required=True)
     parser.add_argument("--assume-units", default="DISP",
                         choices=["VEL", "DISP", "COUNTS"],
@@ -195,36 +195,75 @@ def main() -> None:
 
     diag = []
     mags = []
-    for _, ev in catalog.iterrows():
+    total_traces = len(stream)
+    log(f"Total traces loaded: {total_traces}")
+    if stas is not None:
+        log(f"Station list: {len(stas)} stations, columns={list(stas.columns)}, sample_stations={stas['station'].head(5).tolist()}")
+    else:
+        warn("No station CSV loaded — epicentral distances will use default 10 km!")
+
+    n_matched = 0
+    n_unmatched = 0
+    for _, ev in catalog.iterrows(): #事件循环，仅ev001情况下只执行一次，理论上只会计算本事件的S波最大振幅。
         ev_time = pd.Timestamp(ev["time"])
         origin = UTCDateTime(ev_time.to_pydatetime())
 
+        log(f"\n--- Event: {ev.get('event_id', 'N/A')} @ "
+            f"({ev['latitude']:.4f}, {ev['longitude']:.4f}), depth={ev.get('depth_km', 0.0):.1f} km")
+
         ml_values = []
 
-        for tr in stream:
+        for tr_idx, tr in enumerate(stream):
             # 只取水平分量
             if not _is_horizontal_channel(tr.stats.channel):
                 continue
+
+            sta_name = tr.stats.station
+            chan_code = tr.stats.channel
+            net_code = getattr(tr.stats, 'network', '?')
+            log_key = f"{net_code}.{sta_name}.{chan_code}"
 
             # 基于走时的时间窗口（简化：使用经验走时估算）
             # 对于本地地震，S 波走时 ≈ 距离 / 3.5 km/s
             # 这里先用一个较宽松的窗口，后续可替换为精确走时表
             r_epi_km = 10.0
+            matched = False
             if stas is not None:
-                match = stas[
-                    stas["station"].astype(str).str.split(".").str[-1]
-                    == tr.stats.station
-                ]
-                if len(match):
+                sta_col_str = stas["station"].astype(str)
+                split_last = sta_col_str.str.split(".").str[-1]
+                match_mask = split_last == sta_name
+                match_count = int(match_mask.sum())
+
+                if match_count > 0:
+                    # 可能有多个匹配（同一台站出现在不同行），取第一个
+                    match_idx = stas.index[match_mask][0]
+                    sta_lat = float(stas.loc[match_idx, "latitude"])
+                    sta_lon = float(stas.loc[match_idx, "longitude"])
+                    
                     from common import haversine_km
                     r_epi_km = float(haversine_km(
                         ev["latitude"], ev["longitude"],
-                        match.latitude.iloc[0],
-                        match.longitude.iloc[0],
+                        sta_lat, sta_lon,
                     ))
+                    matched = True
+                    n_matched += 1
+
+            if not matched:
+                n_unmatched += 1
+                warn(f"  Event [{ev.get('event_id', 'N/A')}] trace "
+                     f"[{log_key}] station '{sta_name}' NOT FOUND in station list!")
+                if n_unmatched <= 3:
+                    # 打印前几个未匹配的台站，展示 stations.csv 中实际有的值
+                    show_samples = stas["station"].head(10).tolist() if stas is not None else []
+                    warn(f"   stations.csv sample stations: {show_samples}")
 
             depth_km = float(ev.get("depth_km", 0.0) or 0.0)
             r_hyp_km = float(np.sqrt(r_epi_km ** 2 + depth_km ** 2))
+
+            # 打印前 3 个台站的详细信息用于调试
+            if matched and n_matched <= 3:
+                log(f"  [{log_key}] epi_dist={r_epi_km:.2f} km, hyp_dist={r_hyp_km:.2f} km "
+                    f"(sta_lat={sta_lat:.4f}, sta_lon={sta_lon:.4f})")
 
             # 时间窗口：从 P 波到时前 5 秒开始，持续 max(30, 距离/3) 秒
             p_travel = max(r_epi_km / 6.0, 1.0)   # P 波粗略走时
@@ -282,6 +321,15 @@ def main() -> None:
             "magnitude_type": "ML",
             "n_stations_used": len(ml_filtered),
         })
+        log(f"  -> ML={ml_final:.2f} (from {len(ml_filtered)} stations, "
+            f"raw range=[{ml_arr.min():.2f}, {ml_arr.max():.2f}])")
+
+    # ── 汇总统计 ──
+    log(f"\n=== Magnitude Calculation Summary ===")
+    log(f"  Total trace-event pairs processed: {n_matched + n_unmatched}")
+    log(f"  Station matched: {n_matched}")
+    log(f"  Station NOT matched: {n_unmatched} (used default 10 km distance)")
+    log("===========================")
 
     # ── 合并结果并输出 ──
     mag_df = pd.DataFrame(mags)
