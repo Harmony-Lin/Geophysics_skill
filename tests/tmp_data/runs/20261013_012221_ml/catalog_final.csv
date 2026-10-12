@@ -1,0 +1,2 @@
+event_id,time,latitude,longitude,depth_km,magnitude,magnitude_type,n_stations_used
+nc75265691,2025-11-19T09:00:12.480Z,35.557333333333,-120.79116666667,4.93,3.26,ML,254

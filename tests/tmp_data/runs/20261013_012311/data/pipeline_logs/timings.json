@@ -1,0 +1,126 @@
+{
+  "generated_at": "2026-10-12T17:25:58+00:00",
+  "total_s": 163.028,
+  "steps": [
+    {
+      "phase": "preprocess",
+      "label": "P2 预处理",
+      "seconds": 69.152,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p02_preprocess.py --input data/raw --output data/preprocessed --stations data/stations/stations.xml --remove-response --filter 0.5-20 --resample 100",
+      "timings": {
+        "total_s": 66.603,
+        "steps": [
+          {
+            "name": "read mseed",
+            "seconds": 1.282,
+            "count": 11
+          },
+          {
+            "name": "detrend linear",
+            "seconds": 6.384,
+            "count": 5002
+          },
+          {
+            "name": "demean",
+            "seconds": 5.056,
+            "count": 5002
+          },
+          {
+            "name": "remove response",
+            "seconds": 38.442,
+            "count": 5002
+          },
+          {
+            "name": "bandpass filter",
+            "seconds": 10.705,
+            "count": 5002
+          },
+          {
+            "name": "write mseed",
+            "seconds": 2.415,
+            "count": 11
+          }
+        ]
+      }
+    },
+    {
+      "phase": "pick",
+      "label": "P3 相位拾取",
+      "seconds": 17.796,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p03_pick_phases.py --input data/preprocessed --output data/picks/phasenet_picks.csv"
+    },
+    {
+      "phase": "associate",
+      "label": "P4 事件关联",
+      "seconds": 5.086,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p04_run_association.py --picks data/picks/phasenet_picks.csv --stations data/stations/stations.csv --output data/assoc/events.csv"
+    },
+    {
+      "phase": "locate",
+      "label": "P5 绝对定位",
+      "seconds": 1.767,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p05_grid_locate.py --events data/assoc/events.csv --picks data/picks/phasenet_picks.csv --stations data/stations/stations.csv --output data/locate/catalog_abs.csv"
+    },
+    {
+      "phase": "hypodd",
+      "label": "P6 相对定位",
+      "seconds": 2.418,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p06_run_hypodd.py --catalog data/locate/catalog_abs.csv --waveforms data/preprocessed --picks data/picks/phasenet_picks.csv --stations data/stations/stations.csv --output-dir data/locate/hypodd"
+    },
+    {
+      "phase": "magnitude",
+      "label": "P7 震级计算",
+      "seconds": 41.798,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p07_compute_magnitude.py --catalog C:\\Users\\Admin\\Desktop\\Geophysics\\tests\\tmp_data\\verify_ws\\data\\locate\\hypodd\\catalog_dd.csv --waveforms data/preprocessed --stations data/stations/stations.xml --output data/locate/catalog_final.csv"
+    },
+    {
+      "phase": "qc",
+      "label": "P8 质检与制图",
+      "seconds": 25.011,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p08_qc_and_plot.py --catalog data/locate/catalog_final.csv --picks data/picks/phasenet_picks.csv --waveforms data/preprocessed --stations data/stations/stations.csv --output-dir data/qc --timings C:\\Users\\Admin\\Desktop\\Geophysics\\tests\\tmp_data\\verify_ws\\data\\pipeline_logs\\timings.json",
+      "timings": {
+        "total_s": 23.449,
+        "steps": [
+          {
+            "name": "P8 epicenter map",
+            "seconds": 2.256
+          },
+          {
+            "name": "P8 G-R relation",
+            "seconds": 0.295
+          },
+          {
+            "name": "P8 depth histogram",
+            "seconds": 0.149
+          },
+          {
+            "name": "P8 residuals",
+            "seconds": 0.155
+          },
+          {
+            "name": "P8 pick samples",
+            "seconds": 20.519
+          },
+          {
+            "name": "P8 report",
+            "seconds": 0.054
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 import traceback
+from contextlib import contextmanager
 from pathlib import Path
 
 
@@ -30,6 +32,10 @@ def _force_utf8_streams() -> None:
 
 _force_utf8_streams()
 
+#: Script start reference (common is imported at the top of every phase script).
+#: ``emit()`` reports ``now - _STARTED_AT`` as ``elapsed_s``.
+_STARTED_AT = time.perf_counter()
+
 
 def log(msg: str) -> None:
     """Human-readable log line to stderr."""
@@ -40,9 +46,134 @@ def warn(msg: str) -> None:
     print(f"[WARN] {msg}", file=sys.stderr)
 
 
+def format_duration(seconds: float) -> str:
+    """Human-readable duration: ``0.42 s`` / ``12.34 s`` / ``1 m 05 s`` / ``1 h 02 m 03 s``."""
+    seconds = max(float(seconds), 0.0)
+    if seconds < 60:
+        return f"{seconds:.2f} s"
+    minutes, sec = divmod(int(round(seconds)), 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f"{hours} h {minutes:02d} m {sec:02d} s"
+    return f"{minutes} m {sec:02d} s"
+
+
+#: Pipeline phase keys as used by ``p99_run_pipeline.py`` -> readable label.
+PHASE_LABELS = {
+    "preprocess": "P2 预处理",
+    "pick": "P3 相位拾取",
+    "associate": "P4 事件关联",
+    "locate": "P5 绝对定位",
+    "hypodd": "P6 相对定位",
+    "magnitude": "P7 震级计算",
+    "qc": "P8 质检与制图",
+}
+
+
+def phase_label(key: str) -> str:
+    """``"preprocess"`` -> ``"P2 预处理"``; unknown keys are returned as-is."""
+    return PHASE_LABELS.get(key, key)
+
+
+class StepTimer:
+    """Wall-clock timing for named steps: logs each one and collects a summary.
+
+    Keeps the number that reaches stderr and the JSON payload identical::
+
+        timer = StepTimer()
+        with timer.step("绘制震中分布图"):
+            plot(...)
+        emit({..., "timings": timer.to_dict()})
+    """
+
+    def __init__(self) -> None:
+        self.steps: list[dict] = []
+        self._started = time.perf_counter()
+
+    @contextmanager
+    def step(self, name: str):
+        t0 = time.perf_counter()
+        try:
+            yield
+        finally:
+            self.record(name, time.perf_counter() - t0)
+
+    def record(self, name: str, seconds: float) -> None:
+        self.steps.append({"name": name, "seconds": round(seconds, 3)})
+        log(f"{name}: {format_duration(seconds)}")
+
+    @staticmethod
+    def step_label(step: dict) -> str:
+        """``{"name", "seconds", "count"?}`` -> ``"bandpass filter ×5002"``."""
+        name = str(step.get("name", "?"))
+        count = step.get("count")
+        return f"{name} ×{count}" if isinstance(count, int) and count > 1 else name
+
+    @staticmethod
+    def step_detail(steps: list[dict]) -> str:
+        """``[{"name", "seconds"}]`` -> ``"read mseed 1.20 s、bandpass filter 13.11 s"``."""
+        return "、".join(
+            f"{StepTimer.step_label(s)} {format_duration(float(s.get('seconds') or 0.0))}"
+            for s in steps if isinstance(s, dict) and s.get("name"))
+
+    @property
+    def total_s(self) -> float:
+        """Seconds elapsed since the timer was created."""
+        return round(time.perf_counter() - self._started, 3)
+
+    def to_dict(self) -> dict:
+        return {"total_s": self.total_s, "steps": list(self.steps)}
+
+    def log_summary(self, title: str = "耗时汇总") -> None:
+        detail = self.step_detail(self.steps)
+        log(f"{title}: 总计 {format_duration(self.total_s)}"
+            + (f"（{detail}）" if detail else ""))
+
+
+class CumulativeTimer(StepTimer):
+    """Like :class:`StepTimer`, but repeated ``step()`` calls with one name add up.
+
+    Phase 2 loops over ~5000 traces and times each operation inside that loop;
+    logging every single call would flood stderr.  Here the per-name total (and
+    the number of calls) is accumulated and reported once by
+    :meth:`~StepTimer.log_summary`.  ``to_dict()`` keeps the :class:`StepTimer`
+    shape — plus a ``count`` — so report rendering needs no special case::
+
+        timer = CumulativeTimer()
+        for tr in stream:
+            with timer.step("remove response"):
+                ...
+        timer.log_summary("Phase 2 内部步骤耗时")
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._by_name: dict[str, dict] = {}
+
+    @contextmanager
+    def step(self, name: str):
+        t0 = time.perf_counter()
+        try:
+            yield
+        finally:
+            self.add(name, time.perf_counter() - t0)
+
+    def add(self, name: str, seconds: float) -> None:
+        """Accumulate ``seconds`` under ``name`` (creating the entry on first use)."""
+        entry = self._by_name.get(name)
+        if entry is None:
+            entry = {"name": name, "seconds": 0.0, "count": 0}
+            self._by_name[name] = entry
+            self.steps.append(entry)
+        entry["seconds"] = round(float(entry["seconds"]) + float(seconds), 3)
+        entry["count"] += 1
+
+
 def emit(payload: dict, exit_code: int = 0) -> None:
     """Emit the final JSON result to stdout and exit."""
     payload.setdefault("status", "ok" if exit_code == 0 else "error")
+    payload.setdefault("elapsed_s",
+                       round(time.perf_counter() - _STARTED_AT, 3))
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     sys.exit(exit_code)
 
@@ -53,6 +184,7 @@ def fail(error: str, **extra) -> None:
 
 def run_main(main_fn):
     """Decorator-style wrapper: catch exceptions and convert to JSON error."""
+    t0 = time.perf_counter()
     try:
         main_fn()
     except SystemExit:
@@ -60,6 +192,9 @@ def run_main(main_fn):
     except Exception as exc:  # noqa: BLE001
         traceback.print_exc(file=sys.stderr)
         fail(f"{type(exc).__name__}: {exc}")
+    finally:
+        # stderr only, so the stdout JSON contract is untouched
+        log(f"脚本耗时: {format_duration(time.perf_counter() - t0)}")
 
 
 def ensure_dir(path: str | Path) -> Path:

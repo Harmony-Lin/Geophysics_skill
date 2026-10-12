@@ -1,0 +1,72 @@
+{
+  "status": "ok",
+  "event": "nc75265691",
+  "published_magnitude": 3.19,
+  "published_type": "ml",
+  "computed_magnitude": 3.26,
+  "checks_passed": 12,
+  "checks_total": 12,
+  "checks": [
+    {
+      "check": "CP1 p02 fail-fast on missing StationXML",
+      "ok": true,
+      "detail": "status=error rc=1 error=--remove-response requires an existing StationXML, got: 'stations/does_not_exist.xml'"
+    },
+    {
+      "check": "CP2 p02 succeeded",
+      "ok": true,
+      "detail": "status=ok"
+    },
+    {
+      "check": "CP2 response removed on every trace",
+      "ok": true,
+      "detail": "458/458 traces, output_units=M/S"
+    },
+    {
+      "check": "CP2 preprocessed file written",
+      "ok": true,
+      "detail": "C:\\Users\\Admin\\Desktop\\Geophysics\\tests\\tmp_data\\ml_ws\\preprocessed\\event_02.mseed"
+    },
+    {
+      "check": "CP3 WA PAZ matches obspy WOODANDERSON",
+      "ok": true,
+      "detail": "poles=[(-6.283+4.7124j), (-6.283-4.7124j)] zeros=[0j]"
+    },
+    {
+      "check": "CP3 WA gain/sensitivity match obspy",
+      "ok": true,
+      "detail": "p07 gain=1.0 sens=2080.0 obspy gain=1.0 sens=2080"
+    },
+    {
+      "check": "CP4 WA scaling matches obspy amplitude factor",
+      "ok": true,
+      "detail": "p07=159449.3 mm vs obspy=159344.6 mm (rel=6.57e-04)"
+    },
+    {
+      "check": "CP5 p07 succeeded",
+      "ok": true,
+      "detail": "status=ok"
+    },
+    {
+      "check": "CP5 p07 used Bakun & Joyner (1984)",
+      "ok": true,
+      "detail": "Bakun & Joyner (1984)"
+    },
+    {
+      "check": "CP5 ML within 0.5 of published M3.19 ML",
+      "ok": true,
+      "detail": "ML=3.26 vs published=3.19  (delta=0.07)"
+    },
+    {
+      "check": "CP6 magnitude_type non-empty",
+      "ok": true,
+      "detail": "magnitude_type='ML'"
+    },
+    {
+      "check": "CP6 computed ML overrides upstream magnitude",
+      "ok": true,
+      "detail": "input=3.19 output=3.26"
+    }
+  ],
+  "run_dir": "C:\\Users\\Admin\\Desktop\\Geophysics\\tests\\tmp_data\\runs\\20261013_012221_ml"
+}

@@ -3,6 +3,10 @@
 
 Stops at the first failing phase and emits a JSON summary of completed
 stages. Designed for deterministic execution without LLM mid-decisions.
+
+Every phase is timed: the duration is logged to stderr, recorded inside the
+phase JSON/log (``<phase>.log``) and aggregated into
+``data/pipeline_logs/timings.json``, which Phase 8 renders into ``report.md``.
 """
 from __future__ import annotations
 
@@ -11,13 +15,18 @@ import importlib.util
 import json
 import subprocess
 import sys
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import (emit, ensure_dir, fail, log, run_main,  # noqa: E402
-                    save_stations_csv, stations_from_xml, warn)
+from common import (emit, ensure_dir, fail, format_duration, log,  # noqa: E402
+                    phase_label, run_main, save_stations_csv,
+                    stations_from_xml, warn)
 
 SCRIPTS = Path(__file__).parent
+LOG_DIR = Path("data") / "pipeline_logs"
+TIMINGS_FILE = LOG_DIR / "timings.json"
 
 
 def _has_module(name: str) -> bool:
@@ -57,27 +66,73 @@ def parse_last_json(text: str) -> dict:
     return max(candidates, key=lambda x: x[1])[2]
 
 
+def _write_timings() -> Path:
+    """Aggregate phase durations into ``pipeline_logs/timings.json``.
+
+    Phase 8 reads this file (``--timings``) to put the per-step breakdown into
+    the QC report; writing it after every phase also keeps partial timings on
+    disk when the pipeline aborts at a failing phase.
+    """
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    TIMINGS_FILE.write_text(json.dumps({
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "total_s": round(sum(t["seconds"] for t in TIMINGS), 3),
+        "steps": TIMINGS,
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    return TIMINGS_FILE
+
+
 def run_step(name: str, cmd: list[str]) -> dict:
     log(f"=== Phase {name}: {' '.join(cmd)}")
+    t0 = time.perf_counter()
     proc = subprocess.run(cmd, capture_output=True, text=True)
-    (Path("data") / "pipeline_logs").mkdir(parents=True, exist_ok=True)
-    (Path("data") / "pipeline_logs" / f"{name}.log").write_text(
-        (proc.stdout or "") + "\n---STDERR---\n" + (proc.stderr or ""))
+    elapsed = time.perf_counter() - t0
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    (LOG_DIR / f"{name}.log").write_text(
+        (proc.stdout or "") + "\n---STDERR---\n" + (proc.stderr or "")
+        + "\n---ELAPSED---\n" + f"{elapsed:.3f} s\n", encoding="utf-8")
     result = parse_last_json(proc.stdout)
     if not result:
         result = {"status": "error", "error": "non-JSON stdout",
                   "stdout_tail": (proc.stdout or "")[-1000:]}
+    result["elapsed_s"] = round(elapsed, 3)
+    entry = {
+        "phase": name,
+        "label": phase_label(name),
+        "seconds": round(elapsed, 3),
+        "status": result.get("status", "ok"),
+        "exit_code": proc.returncode,
+        "command": " ".join(str(c) for c in cmd),
+    }
+    if isinstance(result.get("timings"), dict):
+        # 阶段脚本自带的分步耗时（如 P2 的去响应/滤波），P8 会展开进报告
+        entry["timings"] = result["timings"]
+    if isinstance(result.get("response_cache"), dict):
+        # 仪器响应缓存命中率：解释 P2 去响应耗时的关键数字
+        entry["response_cache"] = result["response_cache"]
+    TIMINGS.append(entry)
+    _write_timings()
     if proc.returncode != 0 or result.get("status") not in ("ok", "warning"):
-        result.setdefault("status", "error")
+        log(f"=== Phase {name} 失败，耗时 {format_duration(elapsed)} "
+            f"(exit {proc.returncode})")
+        if result.get("status") != "error":
+            result["status"] = "error"
+            result.setdefault("error", f"phase exited with code {proc.returncode}")
         result["phase"] = name
         result["failed_phase"] = name
         result["completed"] = COMPLETED
+        result["phase_timings"] = list(TIMINGS)
         emit(result, exit_code=1)
     COMPLETED.append(name)
+    log(f"=== Phase {name} 完成，耗时 {format_duration(elapsed)} "
+        f"(exit {proc.returncode})")
     return result
 
 
 COMPLETED: list[str] = []
+
+#: Per-phase durations in completion order (mirrored to timings.json).
+TIMINGS: list[dict] = []
 
 
 def main() -> None:
@@ -99,6 +154,7 @@ def main() -> None:
                              "is for picking/locating only.")
     args = parser.parse_args()
 
+    t_pipeline = time.perf_counter()
     w = args.workdir
     results = {}
 
@@ -205,16 +261,24 @@ def main() -> None:
     results["magnitude"] = run_step("magnitude", magnitude_cmd)
 
     # Phase 8
+    _write_timings()  # flush P2-P7 durations for the report before P8 starts
     results["qc"] = run_step("qc", [
         sys.executable, str(SCRIPTS / "p08_qc_and_plot.py"),
         "--catalog", f"{w}/locate/catalog_final.csv",
         "--picks", f"{w}/picks/phasenet_picks.csv",
         "--waveforms", f"{w}/preprocessed",
         "--stations", stations_csv,
-        "--output-dir", f"{w}/qc"])
+        "--output-dir", f"{w}/qc",
+        "--timings", str(TIMINGS_FILE.resolve())])
 
+    total = time.perf_counter() - t_pipeline
+    detail = "，".join(f"{t['label']} {format_duration(t['seconds'])}"
+                       for t in TIMINGS)
+    log(f"=== 流水线完成，总计 {format_duration(total)}（{detail}）")
     emit({
         "status": "ok",
+        "elapsed_s": round(total, 3),
+        "phase_timings": TIMINGS,
         "completed_phases": COMPLETED,
         "final_catalog": f"{w}/locate/catalog_final.csv",
         "report": f"{w}/qc/report.md",

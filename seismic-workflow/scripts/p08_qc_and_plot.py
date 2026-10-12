@@ -4,13 +4,16 @@ residuals, and a Markdown report."""
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import emit, ensure_dir, fail, load_stations, log, run_main, warn  # noqa: E402
+from common import (StepTimer, emit, ensure_dir, fail, format_duration,  # noqa: E402
+                    load_stations, log, phase_label, run_main, warn)
 
 
 def _annotate_events(ax, catalog, max_labels=30):
@@ -326,14 +329,27 @@ def plot_residuals(catalog, out_png: Path):
             "median_rms_s": round(float(rms.median()), 4)}
 
 
+PICK_WINDOW_PRE_S = 5.0    # left padding before the cluster's first pick
+PICK_WINDOW_MIN_S = 30.0   # floor for the auto-sized window
+PICK_WINDOW_MAX_S = 300.0  # ceiling: beyond this the figure is unreadable
+
+
 def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
-                      event: str = "main", window_s: float = 60.0) -> dict | None:
+                      event: str = "main", window_s: float | None = None,
+                      ) -> dict | None:
     """Phase 3 sample figure: waveforms with PhaseNet picks overlaid.
 
     Plots ONE event — by default the mainshock (the event with the most
     picks). Each station that picked the event gets its own subplot; the
     vertical (Z) channel is preferred for the waveform, and the P (red) /
     S (blue) pick times of that station are marked on its subplot.
+
+    The x axis starts at the cluster's first pick. ``window_s=None`` (the
+    default) sizes it from the cluster itself, because a fixed 60 s window
+    silently drops every later arrival (regional P coda, S, and any nearby
+    event merged into the same cluster) and leaves subplots with no pick
+    line at all. The origin-relative time base is ``t0`` (first pick), not
+    a real origin time, so treat the axis as relative motion time.
     """
     import pandas as pd
     picks = pd.read_csv(picks_csv)
@@ -373,6 +389,19 @@ def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
     ev = picks[picks.event == ev_idx]
     t0 = ev["time"].min()
 
+    # 窗口必须覆盖整个聚类事件：簇内拾取跨度（地区震相 P 波列 + S 尾波）常
+    # 远超固定的 60 s，窗口过窄会让大量子图一条拾取线都画不出来。
+    span_s = float((ev["time"].max() - t0).total_seconds())
+    auto_window = window_s is None or window_s <= 0
+    if auto_window:
+        win = float(np.clip(span_s + PICK_WINDOW_PRE_S,
+                            PICK_WINDOW_MIN_S, PICK_WINDOW_MAX_S))
+        log(f"pick window auto-sized to {win:.0f} s "
+            f"(event #{ev_idx} spans {span_s:.0f} s)")
+    else:
+        win = float(window_s)
+    pre = -PICK_WINDOW_PRE_S
+
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -394,8 +423,9 @@ def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
     fig, axes = plt.subplots(n_rows, 1, figsize=(11, 2.6 * n_rows),
                              squeeze=False)
 
-    info = {"event": ev_idx, "n_stations": n_rows,
-            "stations_plotted": 0, "picks_plotted": 0}
+    info = {"event": ev_idx, "n_stations": n_rows, "window_s": round(win, 1),
+            "window_auto": auto_window, "stations_plotted": 0,
+            "picks_plotted": 0, "picks_off_window": 0}
     for r, sta in enumerate(stations):
         ax = axes[r][0]
         sta_picks = ev[ev["station"] == sta]
@@ -409,32 +439,43 @@ def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
             delta = (pd.Timestamp(tr.stats.starttime.datetime).tz_localize("UTC")
                      - t0).total_seconds()
             tt = np.arange(tr.stats.npts) / tr.stats.sampling_rate + delta
-            m = (tt >= -5) & (tt <= window_s)
+            m = (tt >= pre) & (tt <= win)
             if not m.any():
                 continue
             ax.plot(tt[m], tr.data[m], lw=0.7, color="black")
             plotted = True
             break
+        n_off = 0
         for prow in sta_picks.itertuples():
             dt = (prow.time - t0).total_seconds()
-            if dt < -5 or dt > window_s:
+            if dt < pre or dt > win:
+                n_off += 1
                 continue
             color = "red" if str(prow.phase).upper().startswith("P") else "blue"
             ax.axvline(dt, color=color, lw=1.0, alpha=0.8)
             info["picks_plotted"] += 1
-        ax.set_xlim(-5, window_s)
+        info["picks_off_window"] += n_off
+        ax.set_xlim(pre, win)
         ax.set_ylabel("counts")
-        ax.set_title(f"{sta}  ({len(sta_picks)} picks)", fontsize=9, loc="left")
+        n_win = len(sta_picks) - n_off
+        title = f"{sta}  ({n_win} picks"
+        title += f", +{n_off} off-window)" if n_off else ")"
+        ax.set_title(title, fontsize=9, loc="left")
         if plotted:
             info["stations_plotted"] += 1
 
     from matplotlib.lines import Line2D
     handles = [Line2D([], [], color="red", lw=1.2, label="P pick"),
                Line2D([], [], color="blue", lw=1.2, label="S pick")]
-    axes[-1][0].set_xlabel("Time since origin (s)")
+    axes[-1][0].set_xlabel("Time since first pick t0 (s)")
     fig.legend(handles=handles, loc="upper right", ncol=2)
+    if info["picks_off_window"]:
+        warn(f"{info['picks_off_window']} of {len(ev)} picks fall outside the "
+             f"{win:.0f} s window and are not drawn "
+             "(raise --window to show more)")
     fig.suptitle(f"PhaseNet picks — event {ev_idx + 1} "
-                 f"(origin≈{t0.strftime('%Y-%m-%d %H:%M:%S')} UTC, "
+                 f"(t0≈{t0.strftime('%Y-%m-%d %H:%M:%S')} UTC, "
+                 f"window {win:.0f} s, "
                  f"{len(ev)} picks)", fontsize=12)
     fig.tight_layout(rect=(0, 0, 1, 0.96))
     fig.savefig(out_png, dpi=200)
@@ -482,6 +523,97 @@ def _md_table(headers, rows) -> str:
              "|" + "|".join(["---"] * len(headers)) + "|"]
     lines += ["| " + " | ".join(str(c) for c in row) + " |" for row in rows]
     return "\n".join(lines)
+
+
+def _load_timings(path: str | None, outdir: Path) -> dict | None:
+    """Read ``p99_run_pipeline.py``'s timing file (``None`` when unavailable).
+
+    Without ``--timings`` the pipeline's own location is tried, so a Phase 8
+    run inside the standard layout (``data/qc`` + ``data/pipeline_logs``)
+    picks the breakdown up automatically.
+    """
+    cand = (Path(path) if path
+            else Path(outdir).parent / "pipeline_logs" / "timings.json")
+    if not cand.exists():
+        if path:
+            warn(f"timings file not found: {cand}; the report will only carry "
+                 "this phase's own duration")
+        return None
+    try:
+        data = json.loads(cand.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        warn(f"could not read timings file {cand}: {exc}")
+        return None
+    log(f"Loaded phase timings from {cand}")
+    return data if isinstance(data, dict) else None
+
+
+def _timing_block(timings: dict | None, self_elapsed_s: float | None,
+                  self_timings: dict | None = None) -> str:
+    """Markdown table of per-phase durations (P2-P7 from the pipeline + P8).
+
+    A ``qc`` entry in the timing file is dropped: it comes from an earlier
+    pipeline run, while this run measures P8 itself (``self_elapsed_s``), and
+    keeping both would list Phase 8 twice.
+
+    Phases that time their own sub-steps (``steps[].timings`` in the timing
+    file, e.g. Phase 2's per-operation breakdown) get a detail line under the
+    table, so a slow phase can be read without opening its log.
+    """
+    rows: list[tuple[str, float]] = []
+    details: list[str] = []
+    for step in (timings or {}).get("steps") or []:
+        if not isinstance(step, dict):
+            continue
+        if str(step.get("phase", "")) == "qc":
+            continue
+        label = str(step.get("label")
+                    or phase_label(str(step.get("phase", "?"))))
+        rows.append((label, float(step.get("seconds") or 0.0)))
+        inner = _inner_steps(step.get("timings"))
+        if inner:
+            cache = step.get("response_cache")
+            if isinstance(cache, dict) and "responses_evaluated" in cache:
+                inner += (f"（仪器响应仅实际评估 "
+                          f"{cache['responses_evaluated']} 条道，"
+                          f"{cache.get('responses_reused', 0)} 条复用缓存）")
+            details.append(f"- **{label}** 内部步骤：{inner}")
+    if self_elapsed_s is not None:
+        label = "P8 质检与制图（本阶段）"
+        rows.append((label, float(self_elapsed_s)))
+        inner = _inner_steps(self_timings)
+        if inner:
+            details.append(f"- **{label}** 内部步骤：{inner}")
+    if not rows:
+        return "（本次运行未记录耗时）"
+    total = sum(secs for _, secs in rows)
+    table = _md_table(
+        ["阶段", "耗时", "占比"],
+        [[name, format_duration(secs),
+          f"{100 * secs / total:.1f}%" if total > 0 else "—"]
+         for name, secs in rows]
+        + [["**合计**", f"**{format_duration(total)}**", "100.0%"]])
+    note = ("> P2–P7 为流水线运行器（`p99_run_pipeline.py` / `tests/verify_skill.py`）"
+            "测得的各阶段子进程墙钟时间"
+            "（写入 `data/pipeline_logs/timings.json`，各阶段明细另见同目录 "
+            "`<阶段>.log` 末尾的 `---ELAPSED---`）；P8 一行为本脚本内部计时"
+            "（不含解释器启动与报告写入本身），其内部步骤见上方明细。")
+    if timings is None:
+        note = ("> 未找到流水线计时文件（独立运行 P8 时属正常），下表仅含本阶段"
+                "耗时；P2–P7 每阶段的耗时见 `data/pipeline_logs/<阶段>.log`。")
+    blocks = [table]
+    if details:
+        blocks.append("**各阶段内部步骤**（同一阶段内多次调用会累加，`×N` 为"
+                      "调用次数）\n\n" + "\n".join(details))
+    blocks.append(note)
+    return "\n\n".join(blocks)
+
+
+def _inner_steps(timings: dict | None) -> str:
+    """``{"steps": [{"name", "seconds", "count"?}]}`` -> human-readable list."""
+    if not isinstance(timings, dict):
+        return ""
+    return StepTimer.step_detail(timings.get("steps") or [])
 
 
 def _azimuth_deg(lat0, lon0, lat1, lon1) -> float:
@@ -622,8 +754,12 @@ def _quality_flag(n_stations, rms_s, has_mag: bool = True, *, rms_ref=None,
 
 
 def _write_report(outdir: Path, catalog, stations, paths: dict, map_backend,
-                  map_layers, gr, pick_info, backend_note) -> Path:
-    """Write ``report.md``: 概要 / 统计 / 逐事件表格 / 完整性检查 / 图件."""
+                  map_layers, gr, pick_info, backend_note,
+                  timings: dict | None = None,
+                  self_elapsed_s: float | None = None,
+                  self_timings: dict | None = None) -> Path:
+    """Write ``report.md``: 概要 / 统计 / 耗时 / 逐事件表格 / 完整性检查 / 图件."""
+    timing_block = _timing_block(timings, self_elapsed_s, self_timings)
     import pandas as pd
     from datetime import datetime, timezone
 
@@ -757,10 +893,17 @@ def _write_report(outdir: Path, catalog, stations, paths: dict, map_backend,
 
     pick_note = ""
     if pick_info:
-        pick_note = (f"> 拾取样例图为聚类事件 #{pick_info['event']}，绘制了 "
+        win_note = (f"{pick_info.get('window_s', '—')} s"
+                    + ("（自动按事件跨度取）"
+                       if pick_info.get("window_auto") else "（手动指定）"))
+        pick_note = (f"> 拾取样例图为聚类事件 #{pick_info['event']}"
+                     f"（x 轴起点为该簇最早拾取 t0），窗口 {win_note}；绘制了 "
                      f"{pick_info['stations_plotted']}/"
                      f"{pick_info['n_stations']} 个台站、"
                      f"{pick_info['picks_plotted']} 条拾取。")
+        if pick_info.get("picks_off_window"):
+            pick_note += (f" 另有 {pick_info['picks_off_window']} 条拾取落在窗口外未绘制"
+                          "（可用 `--window` 放宽）。")
 
     figures = "\n".join(
         f"![{title}]({fname})" for title, fname in
@@ -790,6 +933,10 @@ def _write_report(outdir: Path, catalog, stations, paths: dict, map_backend,
   （目录 `rms_s` 反映定位所用拾取的绝对时刻离散水平，量级偏大时以台站数与方位覆盖作为主要质量依据）
 - 单事件平均: 台站 {_fmt(avg_sta, '.0f')} 个 / 参与道 {_fmt(avg_tr, '.0f')} 条 / 拾取 {_fmt(picks_n.mean(), '.0f')} 条
 - 单台 ML 异常剔除: {_fmt(n_rejected, '.0f')} 条道（偏离中位 0.5 级以上）
+
+## 耗时（timing）
+
+{timing_block}
 
 ## 事件目录与震级
 
@@ -833,50 +980,70 @@ def main() -> None:
     parser.add_argument("--event", default="main",
                         help="event to plot: 'main' (mainshock, most picks) "
                              "or an event index (default: main)")
+    parser.add_argument("--window", type=float, default=None,
+                        help="pick sample plot x-window in s after the first "
+                             "pick (default: auto-sized from the event)")
     parser.add_argument("--stations", required=True)
     parser.add_argument("--output-dir", dest="output_dir", required=True)
     parser.add_argument("--backend-note", dest="backend_note", default="")
+    parser.add_argument("--timings",
+                        help="timings.json written by p99_run_pipeline.py; used "
+                             "to show the P2-P8 duration breakdown in report.md "
+                             "(default: <output-dir>/../pipeline_logs/timings.json)")
     args = parser.parse_args()
 
     import pandas as pd
 
+    timer = StepTimer()
     catalog = pd.read_csv(args.catalog)
     stations = load_stations(args.stations)
     outdir = ensure_dir(args.output_dir)
+    timings = _load_timings(args.timings, outdir)
 
     log("Plotting epicenter map...")
-    map_backend, map_layers = plot_epicenter_map(
-        catalog, stations, outdir / "epicenter_map.png")
+    with timer.step("P8 epicenter map"):
+        map_backend, map_layers = plot_epicenter_map(
+            catalog, stations, outdir / "epicenter_map.png")
     log(f"Epicenter map drawn by {map_backend}: "
         f"{', '.join(map_layers) if map_layers else 'no basemap'}")
 
-    log("Computing G-R relation...")
-    gr = plot_gr(catalog, outdir / "gr_relation.png")
+    with timer.step("P8 G-R relation"):
+        log("Computing G-R relation...")
+        gr = plot_gr(catalog, outdir / "gr_relation.png")
 
-    log("Plotting depth histogram...")
-    plot_depth_hist(catalog, outdir / "depth_histogram.png")
+    with timer.step("P8 depth histogram"):
+        log("Plotting depth histogram...")
+        plot_depth_hist(catalog, outdir / "depth_histogram.png")
 
-    log("Plotting residuals...")
-    res = plot_residuals(catalog, outdir / "residuals.png")
+    with timer.step("P8 residuals"):
+        log("Plotting residuals...")
+        res = plot_residuals(catalog, outdir / "residuals.png")
 
     pick_info = None
     if args.picks and Path(args.picks).exists():
-        log("Plotting PhaseNet picking samples (mainshock)...")
-        try:
-            pick_info = plot_pick_samples(args.picks, args.waveforms,
-                                          outdir / "pick_samples.png",
-                                          event=args.event)
-        except Exception as exc:
-            warn(f"pick sample plot failed: {exc}")
+        with timer.step("P8 pick samples"):
+            log("Plotting PhaseNet picking samples (mainshock)...")
+            try:
+                pick_info = plot_pick_samples(args.picks, args.waveforms,
+                                              outdir / "pick_samples.png",
+                                              event=args.event,
+                                              window_s=args.window)
+            except Exception as exc:
+                warn(f"pick sample plot failed: {exc}")
     else:
         warn("--picks not given or missing; skipping pick sample plot")
 
-    report_path = _write_report(
-        outdir, catalog, stations,
-        paths=dict(catalog=args.catalog, stations=args.stations,
-                   picks=args.picks, waveforms=args.waveforms),
-        map_backend=map_backend, map_layers=map_layers, gr=gr,
-        pick_info=pick_info, backend_note=args.backend_note)
+    timer.log_summary("Phase 8 内部步骤耗时")
+
+    with timer.step("P8 report"):
+        report_path = _write_report(
+            outdir, catalog, stations,
+            paths=dict(catalog=args.catalog, stations=args.stations,
+                       picks=args.picks, waveforms=args.waveforms),
+            map_backend=map_backend, map_layers=map_layers, gr=gr,
+            pick_info=pick_info, backend_note=args.backend_note,
+            timings=timings, self_elapsed_s=timer.total_s,
+            self_timings=timer.to_dict())
 
     emit({
         "status": "ok",
@@ -890,6 +1057,7 @@ def main() -> None:
         "plots": ["epicenter_map.png", "gr_relation.png",
                   "depth_histogram.png", "residuals.png", "pick_samples.png"],
         "pick_samples": pick_info,
+        "timings": timer.to_dict(),
     })
 
 

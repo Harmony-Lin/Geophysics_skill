@@ -270,6 +270,16 @@ python scripts/p02_preprocess.py \
 **错误处理**：`n_traces_failed > 0` 时查看 stderr 中 `[WARN]` 行列出的台站；
 失败比例 >10% 则停止并报告用户（可能是响应文件缺失或格式损坏）。
 
+**耗时与性能**：脚本按操作统计耗时（`read mseed` / `detrend linear` / `demean` /
+`remove response` / `bandpass filter` / `resample` / `write mseed`，同一操作多次
+调用累加），写入 stderr 的 `Phase 2 内部步骤耗时: ...` 与 JSON 的 `timings`。
+obspy 的 evalresp 是纯 Python 实现，单条 21000 采样点 trace 的去响应约 70 ms；
+同一批台站在各事件文件里重复出现（Templeton 数据集 5002 条 trace 只有 461 条不同的
+道），因此脚本把**已取倒数的频率响应按道缓存**（`build_cached_remover`，输出与
+`Trace.remove_response` 逐采样点一致），`response_cache` 字段给出实际评估/复用条数。
+若 stderr 出现 `cached response removal unavailable`，说明 obspy 内部结构变化，
+脚本已自动退回 `Trace.remove_response`（慢约 10 倍但结果相同）。
+
 **检查点 2**：确认 `data/preprocessed/` 存在且非空后才进入 Phase 3。
 
 ---
@@ -484,15 +494,30 @@ python scripts/p08_qc_and_plot.py \
 - `gr_relation.png` G-R 关系与完整性震级 Mc
 - `depth_histogram.png` 深度分布直方图
 - `residuals.png` 走时残差分布
-- `pick_samples.png` Phase 3 拾取样例图：选取拾取数最多的若干事件，
-  叠加显示波形与 P/S 拾取竖线（样例数量有限，非全部事件）
+- `pick_samples.png` Phase 3 拾取样例图：只画**一个**聚类事件（默认拾取数
+  最多的那个，可用 `--event` 指定序号），每个拾取到该事件的台站一个子图，
+  优先取该台垂直（Z）分量的波形（即 `--waveforms` 指向的预处理波形，与
+  Phase 3 拾取所用数据一致），叠加 P（红）/S（蓝）拾取竖线。
+  x 轴以该簇**最早拾取 t0** 为起点（不是震源时刻），窗口默认按事件跨度自动
+  取（下限 30 s、上限 300 s），可用 `--window <秒>` 手动指定；窗口外的拾取
+  不绘制，子图标题标注 `+N off-window`，报告也会给出未绘制的条数
 - `report.md` 处理报告（结构见 `assets/report_template.md`）：概要、统计、
+  **耗时表（各阶段 wall-clock 与占比 + 各阶段内部步骤明细）**、
   **逐事件目录与震级表**（每个事件的 ML、参与台站数/道数、拾取数、RMS 与质量分级）、
   单台震级质控表（单台 ML 离散度、震中距范围、方位角间隙）、数据完整性检查、
   输入数据来源与图件引用
 
+**耗时（timing）**：每个阶段脚本都会在 stderr 打印自身各步骤耗时，JSON 里带
+`elapsed_s`；一键流水线还会把每个阶段的耗时写进 `data/pipeline_logs/<阶段>.log`
+末尾的 `---ELAPSED---` 段与 `data/pipeline_logs/timings.json`。P8 通过
+`--timings <timings.json>`（默认在 `<output-dir>/../pipeline_logs/timings.json`
+自动查找）把 P2–P7 的耗时与 P8 自身耗时合并成报告里的**耗时**表。
+阶段脚本自己报的分步耗时（如 P2 的 `remove response`）会经 `timings.json` 的
+`steps[].timings` 透传，P8 在耗时表下方展开成"各阶段内部步骤"明细行。
+单独运行 P8（无 timings 文件）时不会报错，表内只列 P8 自身耗时。
+
 **检查点 8**：确认 `data/qc/report.md` 存在且引用的五张 PNG 均存在后，向用户汇报：
-事件总数、Mc、平均走时残差、使用的定位后端、以及任何 warning。
+事件总数、Mc、平均走时残差、使用的定位后端、各阶段耗时、以及任何 warning。
 
 ---
 
@@ -507,6 +532,12 @@ python scripts/p99_run_pipeline.py \
 
 该脚本串接 P2–P8 并在每阶段校验检查点，任一阶段失败即停并输出已完成阶段的 JSON 摘要。
 当用户意图明确、无需中途决策时优先使用它，减少多轮工具调用。
+
+**逐阶段耗时**：每阶段结束都会在 stderr 打印 `=== Phase <名> 完成，耗时 <时长>`
+并在结束时打印一行总耗时与各阶段明细；该耗时同时写入
+`data/pipeline_logs/<阶段>.log`（末尾 `---ELAPSED---` 段）、
+`data/pipeline_logs/timings.json`（含各阶段脚本自报的分步耗时）与顶层 JSON 的
+`elapsed_s` / `phase_timings`，最后由 P8 汇总进 `report.md` 的"耗时"表。
 
 **台站元数据**：`--stations-dir` 下必须有 `stations.xml`（StationXML）。
 缺 XML 时脚本立即失败并给出提示——因为 P2 的 `--remove-response` 和 P7 的 ML

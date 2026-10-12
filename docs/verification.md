@@ -19,6 +19,8 @@
 | CP5 | 定位 (P5) | 定位成功数 ≥ 关联事件数的 50% |
 | CP7 | 震级 (P7) | 最终目录含 lat/lon/depth 列；ML 由 Wood-Anderson 仿真 (Bakun & Joyner 1984) 计算且 `magnitude_type=="ML"` |
 | CP8 | 质检 (P8) | `report.md` + ≥5 张 PNG 图件（含拾取样例图） |
+| CP8b | 计时 | `pipeline_logs/timings.json` 记录每阶段耗时；报告含"耗时"小节；阶段日志含 `---ELAPSED---` |
+| CP8c | 分步计时 | P2 的分步耗时（`remove response` 等）经 `timings.json` 的 `steps[].timings` 进入报告"各阶段内部步骤"明细，且出现在 `preprocess.log` |
 
 P6（HypoDD 相对定位）默认跳过（`--skip hypodd`），因二进制缺失时自动回退。
 
@@ -107,7 +109,7 @@ PhaseNet 权重首次运行会自动下载到 `~/.cache/seisbench/`；离线环�
 ```json
 {
   "status": "ok",
-  "passed": 9,
+  "passed": 12,
   "failed": 0,
   "checks": [ ... ],
   "workspace": "(removed)"
@@ -142,12 +144,22 @@ verify_ws/
         ├── preprocess.log
         ├── pick.log
         ├── associate.log
+        ├── timings.json         # 各阶段耗时汇总（P8 读它生成报告里的耗时表）
         └── ...
 ```
 
+每个 `<阶段>.log` 的末尾多一段 `---ELAPSED---`，给出该阶段子进程的墙钟耗时；
+`timings.json` 是同一批数据的 JSON 版本（`generated_at` / `total_s` / `steps[]`，
+每步含 `phase`、`label`、`seconds`、`status`、`exit_code`、`command`，
+以及阶段脚本自报的 `timings`（内部步骤明细，如 P2 的 `remove response`）和
+`response_cache`），`data/qc/report.md` 的"耗时（timing）"小节即由它渲染，
+阶段级耗时表下方还会列出各阶段内部步骤。
+
 **排查失败时的阅读顺序**：先看控制台哪条检查点 FAIL → 打开对应的
 `pipeline_logs/<阶段>.log`（JSON 为 stdout 结果，`---STDERR---` 之后是
-人类可读日志/堆栈）→ 需要时再检查对应目录的中间 CSV。
+人类可读日志/堆栈，`---ELAPSED---` 之后是该阶段耗时）→ 需要时再检查对应目录的中间 CSV。
+要判断"是不是某个阶段特别慢"，直接看 `pipeline_logs/timings.json` 或
+`report.md` 的耗时表与内部步骤明细即可，无需翻日志。
 
 ## 5. ML 震级回归测试（`tests/verify_ml.py`）
 
@@ -176,7 +188,7 @@ verify_ws/
 
 ## 6. 当前已知状态与限制
 
-截至本文件编写时（2026-08-26）：**全部检查点通过（9/9）**
+截至本文件编写时（2026-10-13）：**全部检查点通过（12/12）**
 
 | 项目 | 状态 |
 |------|------|

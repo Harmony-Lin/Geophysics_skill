@@ -1,0 +1,20 @@
+{
+  "status": "ok",
+  "model": "phasenet",
+  "device": "cuda",
+  "n_files": 11,
+  "n_traces": 5002,
+  "n_picks": 644,
+  "n_p_picks": 471,
+  "n_s_picks": 173,
+  "picks_file": "data\\picks\\phasenet_picks.csv",
+  "elapsed_s": 16.595
+}
+
+---STDERR---
+[INFO] Loading phasenet model (device=cuda)...
+[INFO] [10/11] files processed, 598 picks so far...
+[INFO] 脚本耗时: 16.60 s
+
+---ELAPSED---
+17.933 s

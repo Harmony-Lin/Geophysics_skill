@@ -1,0 +1,308 @@
+INPUT FILES: 
+cross dtime data: dt.cc 
+catalog dtime data: dt.ct 
+events: event.dat 
+stations: station.dat 
+
+OUTPUT FILES: 
+initial locations: hypoDD.loc 
+relocated events: hypoDD.reloc 
+event pair residuals: hypoDD.res 
+station residuals: hypoDD.sta 
+source parameters: hypoDD.src 
+
+
+INPUT PARAMETERS: 
+IDATA: 2 
+IPHASE: 3 
+MAXDIST = 500.0000 
+MINOBS_CC: 0 
+MINOBS_CT = 0 
+ISTART: 2 
+ISOLV: 2 
+
+ITER: 1 - 5 
+DAMP: 80 
+WT_CCP: 0.0000 
+WT_CCS: 0.0000 
+MAXR_CC: -9.0000 
+MAXD_CC: -9.0000 
+WT_CTP: 1.0000 
+WT_CTS: 0.5000 
+MAXR_CT -9.0000 
+MAXD_CT: -9.0000 
+
+MOD_NL: 6 
+MOD_RATIO: 1.7300 
+MOD_TOP       MOD_V 
+0.00000     2.96000 
+1.00000     3.19000 
+2.00000     4.72000 
+4.00000     4.95000 
+7.00000     5.51000 
+12.00000     5.96000 
+Relocate all cluster. 
+
+Relocate all events. 
+
+
+
+starting hypoDD (python version) 13/10/2026 00:46:56 
+
+
+Reading data . . .  13/10/2026 00:46:56 
+# events = 11 
+> Percent stations kept (<maxdist): 1.000000> stations = 157 
+# Catalog P dtimes =     459 
+# Catalog S dtimes =     177 
+
+
+Starting number of data measurements:
+NCCP: 0
+NCCS: 0
+Total Number of CC measurements: 0
+NCTP: 459
+NCTS: 177
+Total Number of CATALOG (CT) Measurements: 636
+Total Number of DTs total:      636 
+
+
+Cleanarrays ...
+Starting No. Data: 636
+
+# Post clean event loop (nev):         11 
+# Post clean stations loop (nsta) =     24 
+Final No. of Data: 636 
+
+(hypoDD) No clustering performed. 
+
+
+(hypoDD) RELOCATION OF CLUSTER:  1     13/10/2026 00:46:56 
+
+
+(hypoDD) Cluster centroid at:  35.572109  -120.814036  12.430000 
+# Events:    11 
+(hypoDD) # Initial trial sources:     11 
+
+
+
+(hypoDD) 
+=== ITERATION   1 (  1) 13/10/2026 00:46:56 
+(hypoDD) Starting iteration 1 with 636 number of data points 
+
+Weighting parameters for this iteration: 
+wt_ccp=  0.0000  wt_ccs=  0.0000  maxr_cc= -9.0000  maxd_cc= -9.0000 
+wt_ctp=  1.0000  wt_cts=  0.5000  maxr_ct= -9.0000  maxd_ct= -9.0000  damp= 80.0000 
+
+(hypoDD) No data skipped. 
+
+Residual summary of initial data: 
+ absolute mean [s] = -0.0335 
+ weighted mean [s] = -0.0122 
+ absolute variance [s] = 360.5871 
+ weighted variance [s] = 245.6433 
+ absolute ct rms [s] =  0.5808 
+ weighted ct rms [s] (RMSCT) =  0.5560 
+
+(hypoDD) Pre-iversion iteration 0 with 636 number of data 
+
+~ Setting up G matrix: 
+~ Scaling G Columns 
+~ lsqr .... 13/10/2026 00:46:56 
+
+  istop = 2; acond (CND)=      5.0; anorm =    194.9; arnorm =      0.4; xnorm =     37.5; itn = 5\4400 
+
+Residual summary: 
+ absolute ct rms [s] =  0.5395 (  -7.10 %) 
+ weighted ct rms [s] =  0.5167 (  -7.08 %) 
+
+Location summary: 
+ mean 2sig-error (x,y,z,t) [m,ms]:  8064.9,  7443.1, 19077.8,  2743.8, (  8064.9,  7443.1, 19077.8,  2743.8), 
+ mean shift (x,y,z,t) [m,ms] (DX,DY,DZ,DT):   166.4,    97.9,   339.9,    12.1, (   166.4,    97.9,   339.9,    12.1), 
+
+(hypoDD) Post-iversion iteration 0 with 636 number of data 
+
+(hypoDD) Cluster centroid at:  35.571928  -120.813427  12.614802 
+(hypoDD) Mean centroid (origin) shift in x,y,z,t [m,ms]:    55.2,  -20.1,  184.8,    4.4 
+
+More: 
+ mean pick quality = 1.000 
+
+
+(hypoDD) Iteration  1 finished with 636 number of data at 13/10/2026 00:46:56 
+(hypoDD) Length of iteration: 0:00:00.061258 
+(hypoDD) Time since start of cluster: 0:00:00.061266 
+
+
+
+(hypoDD) 
+=== ITERATION   2 (  2) 13/10/2026 00:46:56 
+(hypoDD) Starting iteration 2 with 636 number of data points 
+
+Weighting parameters for this iteration: 
+wt_ccp=  0.0000  wt_ccs=  0.0000  maxr_cc= -9.0000  maxd_cc= -9.0000 
+wt_ctp=  1.0000  wt_cts=  0.5000  maxr_ct= -9.0000  maxd_ct= -9.0000  damp= 80.0000 
+
+(hypoDD) No data skipped. 
+
+(hypoDD) Pre-iversion iteration 1 with 636 number of data 
+
+~ Setting up G matrix: 
+~ Scaling G Columns 
+~ lsqr .... 13/10/2026 00:46:56 
+
+  istop = 2; acond (CND)=      5.0; anorm =    194.7; arnorm =      0.4; xnorm =     32.2; itn = 5\4400 
+
+Residual summary: 
+ absolute ct rms [s] =  0.5079 (  -5.86 %) 
+ weighted ct rms [s] =  0.4875 (  -5.64 %) 
+
+Location summary: 
+ mean 2sig-error (x,y,z,t) [m,ms]:  7358.0,  6784.0, 17024.5,  2520.8, (  -706.9,  -659.0, -2053.3,  -223.0), 
+ mean shift (x,y,z,t) [m,ms] (DX,DY,DZ,DT):   144.3,    90.0,   246.7,     9.2, (   -22.1,    -7.9,   -93.2,    -2.9), 
+
+(hypoDD) Post-iversion iteration 1 with 636 number of data 
+
+(hypoDD) Cluster centroid at:  35.571740  -120.812891  12.747455 
+(hypoDD) Mean centroid (origin) shift in x,y,z,t [m,ms]:   103.7,  -41.0,  317.5,    7.8 
+
+More: 
+ mean pick quality = 1.000 
+
+
+(hypoDD) Iteration  2 finished with 636 number of data at 13/10/2026 00:46:56 
+(hypoDD) Length of iteration: 0:00:00.059903 
+(hypoDD) Time since start of cluster: 0:00:00.121180 
+
+
+
+(hypoDD) 
+=== ITERATION   3 (  3) 13/10/2026 00:46:56 
+(hypoDD) Starting iteration 3 with 636 number of data points 
+
+Weighting parameters for this iteration: 
+wt_ccp=  0.0000  wt_ccs=  0.0000  maxr_cc= -9.0000  maxd_cc= -9.0000 
+wt_ctp=  1.0000  wt_cts=  0.5000  maxr_ct= -9.0000  maxd_ct= -9.0000  damp= 80.0000 
+
+(hypoDD) No data skipped. 
+
+(hypoDD) Pre-iversion iteration 2 with 636 number of data 
+
+~ Setting up G matrix: 
+~ Scaling G Columns 
+~ lsqr .... 13/10/2026 00:46:56 
+
+  istop = 2; acond (CND)=      5.0; anorm =    194.3; arnorm =      0.3; xnorm =     28.2; itn = 5\4400 
+
+Residual summary: 
+ absolute ct rms [s] =  0.4825 (  -5.01 %) 
+ weighted ct rms [s] =  0.4639 (  -4.84 %) 
+
+Location summary: 
+ mean 2sig-error (x,y,z,t) [m,ms]:  6780.7,  6248.6, 15506.9,  2327.9, (  -577.2,  -535.4, -1517.6,  -192.9), 
+ mean shift (x,y,z,t) [m,ms] (DX,DY,DZ,DT):   129.3,    82.2,   195.3,     7.2, (   -15.0,    -7.8,   -51.4,    -2.1), 
+
+(hypoDD) Post-iversion iteration 2 with 636 number of data 
+
+(hypoDD) Cluster centroid at:  35.571553  -120.812415  12.850298 
+(hypoDD) Mean centroid (origin) shift in x,y,z,t [m,ms]:   146.9,  -61.7,  420.3,   10.4 
+
+More: 
+ mean pick quality = 1.000 
+
+
+(hypoDD) Iteration  3 finished with 636 number of data at 13/10/2026 00:46:56 
+(hypoDD) Length of iteration: 0:00:00.059900 
+(hypoDD) Time since start of cluster: 0:00:00.181089 
+
+
+
+(hypoDD) 
+=== ITERATION   4 (  4) 13/10/2026 00:46:56 
+(hypoDD) Starting iteration 4 with 636 number of data points 
+
+Weighting parameters for this iteration: 
+wt_ccp=  0.0000  wt_ccs=  0.0000  maxr_cc= -9.0000  maxd_cc= -9.0000 
+wt_ctp=  1.0000  wt_cts=  0.5000  maxr_ct= -9.0000  maxd_ct= -9.0000  damp= 80.0000 
+
+(hypoDD) No data skipped. 
+
+(hypoDD) Pre-iversion iteration 3 with 636 number of data 
+
+~ Setting up G matrix: 
+~ Scaling G Columns 
+~ lsqr .... 13/10/2026 00:46:56 
+
+  istop = 2; acond (CND)=      5.0; anorm =    194.0; arnorm =      0.3; xnorm =     25.1; itn = 5\4400 
+
+Residual summary: 
+ absolute ct rms [s] =  0.4611 (  -4.44 %) 
+ weighted ct rms [s] =  0.4443 (  -4.23 %) 
+
+Location summary: 
+ mean 2sig-error (x,y,z,t) [m,ms]:  6336.0,  5835.2, 14643.1,  2221.0, (  -444.7,  -413.4,  -863.8,  -106.9), 
+ mean shift (x,y,z,t) [m,ms] (DX,DY,DZ,DT):   119.6,    75.3,   191.9,     6.1, (    -9.6,    -6.9,    -3.4,    -1.0), 
+
+(hypoDD) Post-iversion iteration 3 with 636 number of data 
+
+(hypoDD) Cluster centroid at:  35.571367  -120.811979  12.953242 
+(hypoDD) Mean centroid (origin) shift in x,y,z,t [m,ms]:   186.4,  -82.3,  523.2,   12.5 
+
+More: 
+ mean pick quality = 1.000 
+
+
+(hypoDD) Iteration  4 finished with 636 number of data at 13/10/2026 00:46:56 
+(hypoDD) Length of iteration: 0:00:00.061953 
+(hypoDD) Time since start of cluster: 0:00:00.243051 
+
+
+
+(hypoDD) 
+=== ITERATION   5 (  5) 13/10/2026 00:46:56 
+(hypoDD) Starting iteration 5 with 636 number of data points 
+
+Weighting parameters for this iteration: 
+wt_ccp=  0.0000  wt_ccs=  0.0000  maxr_cc= -9.0000  maxd_cc= -9.0000 
+wt_ctp=  1.0000  wt_cts=  0.5000  maxr_ct= -9.0000  maxd_ct= -9.0000  damp= 80.0000 
+
+(hypoDD) No data skipped. 
+
+(hypoDD) Pre-iversion iteration 4 with 636 number of data 
+
+~ Setting up G matrix: 
+~ Scaling G Columns 
+~ lsqr .... 13/10/2026 00:46:56 
+
+  istop = 2; acond (CND)=      5.0; anorm =    193.7; arnorm =      0.2; xnorm =     22.7; itn = 5\4400 
+
+Residual summary: 
+ absolute ct rms [s] =  0.4434 (  -3.84 %) 
+ weighted ct rms [s] =  0.4279 (  -3.70 %) 
+
+Location summary: 
+ mean 2sig-error (x,y,z,t) [m,ms]:  6043.2,  5537.3, 13673.0,  2112.4, (  -292.8,  -297.9,  -970.1,  -108.5), 
+ mean shift (x,y,z,t) [m,ms] (DX,DY,DZ,DT):   110.9,    69.1,   179.3,     5.2, (    -8.7,    -6.2,   -12.6,    -0.9), 
+
+(hypoDD) Post-iversion iteration 4 with 636 number of data 
+
+(hypoDD) Cluster centroid at:  35.571184  -120.811580  13.024300 
+(hypoDD) Mean centroid (origin) shift in x,y,z,t [m,ms]:   222.5, -102.7,  594.3,   14.1 
+
+More: 
+ mean pick quality = 1.000 
+
+
+(hypoDD) Iteration  5 finished with 636 number of data at 13/10/2026 00:46:56 
+(hypoDD) Length of iteration: 0:00:00.062840 
+(hypoDD) Time since start of cluster: 0:00:00.305901 
+
+
+ (hypoDD) writing update traveltime residuals to tt_res_final.txt 
+
+
+ Traveltime Residuals P for Cluster 1 
+Mean: 0.023127, Median: -0.010114, RMS: 0.846335 
+Traveltime Residuals S 
+Mean: 0.040009, Median: -0.017496, RMS: 1.464160 
+HypoDD Done 13/10/2026 00:46:56 

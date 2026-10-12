@@ -1,0 +1,62 @@
+{
+  "generated_at": "2026-10-12T16:48:02+00:00",
+  "total_s": 451.412,
+  "steps": [
+    {
+      "phase": "preprocess",
+      "label": "P2 预处理",
+      "seconds": 358.531,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p02_preprocess.py --input data/raw --output data/preprocessed --stations data/stations/stations.xml --remove-response --filter 0.5-20 --resample 100"
+    },
+    {
+      "phase": "pick",
+      "label": "P3 相位拾取",
+      "seconds": 17.933,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p03_pick_phases.py --input data/preprocessed --output data/picks/phasenet_picks.csv"
+    },
+    {
+      "phase": "associate",
+      "label": "P4 事件关联",
+      "seconds": 5.118,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p04_run_association.py --picks data/picks/phasenet_picks.csv --stations data/stations/stations.csv --output data/assoc/events.csv"
+    },
+    {
+      "phase": "locate",
+      "label": "P5 绝对定位",
+      "seconds": 1.784,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p05_grid_locate.py --events data/assoc/events.csv --picks data/picks/phasenet_picks.csv --stations data/stations/stations.csv --output data/locate/catalog_abs.csv"
+    },
+    {
+      "phase": "hypodd",
+      "label": "P6 相对定位",
+      "seconds": 2.361,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p06_run_hypodd.py --catalog data/locate/catalog_abs.csv --waveforms data/preprocessed --picks data/picks/phasenet_picks.csv --stations data/stations/stations.csv --output-dir data/locate/hypodd"
+    },
+    {
+      "phase": "magnitude",
+      "label": "P7 震级计算",
+      "seconds": 40.872,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p07_compute_magnitude.py --catalog C:\\Users\\Admin\\Desktop\\Geophysics\\tests\\tmp_data\\verify_ws\\data\\locate\\hypodd\\catalog_dd.csv --waveforms data/preprocessed --stations data/stations/stations.xml --output data/locate/catalog_final.csv"
+    },
+    {
+      "phase": "qc",
+      "label": "P8 质检与制图",
+      "seconds": 24.813,
+      "status": "ok",
+      "exit_code": 0,
+      "command": "C:\\Users\\Admin\\Desktop\\Geophysics\\.venv\\Scripts\\python.exe C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\scripts\\p08_qc_and_plot.py --catalog data/locate/catalog_final.csv --picks data/picks/phasenet_picks.csv --waveforms data/preprocessed --stations data/stations/stations.csv --output-dir data/qc --timings C:\\Users\\Admin\\Desktop\\Geophysics\\tests\\tmp_data\\verify_ws\\data\\pipeline_logs\\timings.json"
+    }
+  ]
+}

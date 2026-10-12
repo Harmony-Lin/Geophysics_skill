@@ -9,7 +9,8 @@ FDSN data centres (EarthScope/NCEDC/SCEDC) via tests/fetch_templeton.py.
      + Phase-1 radius CLI contract (tests/verify_fetch_event.py --offline)
   2-8. run_pipeline.py    -> checkpoints: preprocessed/, picks CSV,
        assoc events, located catalog, final catalog columns,
-       qc report.md + 5 PNGs
+       qc report.md + 5 PNGs, per-phase timing in log + report
+       (incl. Phase 2's own sub-step breakdown)
 
 Every run's full intermediate files and results are saved to
 tests/tmp_data/runs/<YYYYmmdd_HHMMSS>/ (never overwritten).
@@ -28,7 +29,8 @@ import json
 import shutil
 import subprocess
 import sys
-from datetime import datetime
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,6 +39,35 @@ TMP = Path(__file__).resolve().parent / "tmp_data"
 WS = TMP / "verify_ws"          # scratch workspace (cwd for the pipeline)
 RUN_DIR = TMP / "runs" / datetime.now().strftime("%Y%m%d_%H%M%S")
                                 # per-run archive (kept forever)
+
+#: Per-phase durations, mirrored into ``data/pipeline_logs/timings.json`` the
+#: same way ``p99_run_pipeline.py`` does (Phase 8 reads that file for report.md).
+TIMINGS: list[dict] = []
+
+#: Phase key -> label; kept in sync with ``common.PHASE_LABELS`` (importing
+#: common here would reconfigure this harness' stdout encoding).
+PHASE_LABELS = {
+    "preprocess": "P2 预处理",
+    "pick": "P3 相位拾取",
+    "associate": "P4 事件关联",
+    "locate": "P5 绝对定位",
+    "hypodd": "P6 相对定位",
+    "magnitude": "P7 震级计算",
+    "qc": "P8 质检与制图",
+}
+
+
+def fmt_duration(seconds: float) -> str:
+    """``0.42 s`` / ``12.34 s`` / ``1 m 05 s`` / ``1 h 02 m 03 s``."""
+    seconds = max(float(seconds), 0.0)
+    if seconds < 60:
+        return f"{seconds:.2f} s"
+    minutes, sec = divmod(int(round(seconds)), 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f"{hours} h {minutes:02d} m {sec:02d} s"
+    return f"{minutes} m {sec:02d} s"
+
 
 CHECKS: list[dict] = []
 
@@ -82,6 +113,49 @@ def parse_last_json(text: str) -> dict:
     return max(candidates, key=lambda x: x[1])[2]
 
 
+def timings_ok(data_dir: Path) -> bool:
+    """True when ``timings.json`` exists and every recorded phase has a duration."""
+    path = data_dir / "pipeline_logs" / "timings.json"
+    if not path.exists():
+        return False
+    try:
+        steps = json.loads(path.read_text(encoding="utf-8")).get("steps", [])
+    except (OSError, json.JSONDecodeError):
+        return False
+    return bool(steps) and all(
+        isinstance(s.get("seconds"), (int, float)) and s["seconds"] > 0
+        and s.get("phase") for s in steps)
+
+
+def inner_timings(data_dir: Path) -> dict:
+    """``phase -> number of sub-steps`` for phases that time their own steps."""
+    path = data_dir / "pipeline_logs" / "timings.json"
+    try:
+        steps = json.loads(path.read_text(encoding="utf-8")).get("steps", [])
+    except (OSError, json.JSONDecodeError):
+        return {}
+    out = {}
+    for s in steps:
+        if not isinstance(s, dict):
+            continue
+        inner = s.get("timings")
+        if isinstance(inner, dict) and inner.get("steps"):
+            out[str(s.get("phase"))] = len(inner["steps"])
+    return out
+
+
+def write_timings(log_dir: Path) -> Path:
+    """Aggregate per-phase durations (mirrors p99_run_pipeline._write_timings)."""
+    log_dir.mkdir(parents=True, exist_ok=True)
+    path = log_dir / "timings.json"
+    path.write_text(json.dumps({
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "total_s": round(sum(t["seconds"] for t in TIMINGS), 3),
+        "steps": TIMINGS,
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+
 def run_step(name: str, cmd: list[str], cwd: Path) -> dict:
     """Run one pipeline phase with real-time logs; returns parsed JSON.
 
@@ -90,6 +164,7 @@ def run_step(name: str, cmd: list[str], cwd: Path) -> dict:
     """
     import threading
     print(f"\n=== Phase {name}: {' '.join(str(c) for c in cmd)}")
+    t0 = time.perf_counter()
     proc = subprocess.Popen(
         [str(c) for c in cmd], cwd=str(cwd),
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
@@ -109,6 +184,7 @@ def run_step(name: str, cmd: list[str], cwd: Path) -> dict:
     proc.wait()
     t_out.join()
     t_err.join()
+    elapsed = time.perf_counter() - t0
 
     stdout = "".join(out_lines)
     stderr = "".join(err_lines)
@@ -117,14 +193,36 @@ def run_step(name: str, cmd: list[str], cwd: Path) -> dict:
     log_dir = cwd / "data" / "pipeline_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     (log_dir / f"{name}.log").write_text(
-        stdout + "\n---STDERR---\n" + stderr, encoding="utf-8")
+        stdout + "\n---STDERR---\n" + stderr
+        + "\n---ELAPSED---\n" + f"{elapsed:.3f} s\n", encoding="utf-8")
 
     result = parse_last_json(stdout)
     if not result:
         result = {"status": "error", "error": "non-JSON stdout",
                   "stdout_tail": stdout[-1000:]}
+    result["elapsed_s"] = round(elapsed, 3)
+    entry = {
+        "phase": name,
+        "label": PHASE_LABELS.get(name, name),
+        "seconds": round(elapsed, 3),
+        "status": result.get("status", "ok"),
+        "exit_code": proc.returncode,
+        "command": " ".join(str(c) for c in cmd),
+    }
+    if isinstance(result.get("timings"), dict):
+        # 阶段脚本自带的分步耗时（如 P2 的去响应/滤波），P8 会展开进报告
+        entry["timings"] = result["timings"]
+    if isinstance(result.get("response_cache"), dict):
+        # 仪器响应缓存命中率：解释 P2 去响应耗时的关键数字
+        entry["response_cache"] = result["response_cache"]
+    TIMINGS.append(entry)
+    write_timings(log_dir)
+    print(f"=== Phase {name} 耗时 {fmt_duration(elapsed)} "
+          f"(exit {proc.returncode})")
     if proc.returncode != 0 or result.get("status") not in ("ok", "warning"):
-        result.setdefault("status", "error")
+        if result.get("status") != "error":
+            result["status"] = "error"
+            result.setdefault("error", f"phase exited with code {proc.returncode}")
         result["phase"] = name
         result["failed_phase"] = name
     return result
@@ -139,6 +237,8 @@ def run_pipeline(py: str, cwd: Path) -> dict:
     w = "data"
     results = {}
     completed = []
+    timings_file = cwd / w / "pipeline_logs" / "timings.json"
+    t_pipeline = time.perf_counter()
 
     # Phase 2 — remove instrument response so later phases see physical units
     stations_xml = f"{w}/stations/stations.xml"
@@ -216,11 +316,19 @@ def run_pipeline(py: str, cwd: Path) -> dict:
         "--picks", f"{w}/picks/phasenet_picks.csv",
         "--waveforms", f"{w}/preprocessed",
         "--stations", stations_csv,
-        "--output-dir", f"{w}/qc"], cwd)
+        "--output-dir", f"{w}/qc",
+        "--timings", str(timings_file.resolve())], cwd)
     completed.append("qc")
+
+    total = time.perf_counter() - t_pipeline
+    detail = "，".join(f"{t['label']} {fmt_duration(t['seconds'])}"
+                       for t in TIMINGS)
+    print(f"\n=== 流水线完成，总计 {fmt_duration(total)}（{detail}）")
 
     return {
         "status": "ok",
+        "elapsed_s": round(total, 3),
+        "phase_timings": TIMINGS,
         "completed_phases": completed,
         "final_catalog": f"{w}/locate/catalog_final.csv",
         "report": f"{w}/qc/report.md",
@@ -340,6 +448,29 @@ def main() -> int:
     pngs = sorted(qc.glob("*.png"))
     check("CP8 qc artifacts", (qc / "report.md").exists() and len(pngs) >= 5,
           f"{len(pngs)} PNGs + report.md={'yes' if (qc/'report.md').exists() else 'no'}")
+
+    # Checkpoint 8b: per-step timing reached the log and the report, including
+    # Phase 2's own sub-steps (response removal dominates the pipeline).
+    report_txt = ((qc / "report.md").read_text(encoding="utf-8")
+                  if (qc / "report.md").exists() else "")
+    log_txt = ((d / "pipeline_logs" / "pick.log").read_text(encoding="utf-8")
+               if (d / "pipeline_logs" / "pick.log").exists() else "")
+    prep_log_path = d / "pipeline_logs" / "preprocess.log"
+    prep_log = (prep_log_path.read_text(encoding="utf-8")
+                if prep_log_path.exists() else "")
+    inner = inner_timings(d)
+    check("CP8 timing in log+report",
+          timings_ok(d) and "耗时" in report_txt and "---ELAPSED---" in log_txt,
+          f"timings.json={'yes' if (d/'pipeline_logs'/'timings.json').exists() else 'no'}, "
+          f"report 耗时={'yes' if '耗时' in report_txt else 'no'}, "
+          f"log ELAPSED={'yes' if '---ELAPSED---' in log_txt else 'no'}")
+    check("CP8b P2 sub-step timing",
+          inner.get("preprocess", 0) >= 5
+          and "remove response" in prep_log
+          and "remove response" in report_txt,
+          f"timings.json 内部步骤={inner}, "
+          f"preprocess.log={'yes' if 'remove response' in prep_log else 'no'}, "
+          f"report={'yes' if 'remove response' in report_txt else 'no'}")
 
     return finish(args.keep)
 

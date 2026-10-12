@@ -8,9 +8,120 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import emit, ensure_dir, fail, log, run_main, warn  # noqa: E402
+from common import (CumulativeTimer, emit, ensure_dir, fail, log,  # noqa: E402
+                    run_main, warn)
 
 WAVEFORM_EXTS = {".mseed", ".miniseed", ".seed", ".sac", ".msd"}
+
+#: How many instrument responses to keep cached at once.  One entry holds a
+#: complex spectrum of ``nfft // 2 + 1`` points (~262 KB at nfft = 32768), so the
+#: default caps the cache at roughly 270 MB even for a large array.
+RESPONSE_CACHE_MAX = 1024
+
+
+class ResponseCache:
+    """Reuse one evalresp evaluation per channel across all input files.
+
+    obspy's evalresp is a pure-Python implementation: evaluating a multi-stage
+    response on the ~16k frequencies of a 21000-sample trace costs ~70 ms, and
+    ``Trace.remove_response`` does that once per *trace*.  The same stations come
+    back in every event file (this dataset: 5002 traces but only 461 distinct
+    channels), so recomputing is ~10x wasted work.
+
+    Keyed on the response object identity plus everything the evaluation depends
+    on, and stores the response object to keep that identity (and the ``id()``
+    key) valid for as long as the entry lives.
+    """
+
+    def __init__(self, max_entries: int = RESPONSE_CACHE_MAX) -> None:
+        self._by_key: dict[tuple, tuple] = {}
+        self._max_entries = max_entries
+        self.hits = 0
+        self.misses = 0
+
+    def get(self, response, delta: float, nfft: int, output: str,
+            water_level: float | None, invert):
+        """Return the *inverted* frequency response for ``response``.
+
+        ``invert`` is called once per distinct key to fill the cache; it must be
+        a pure function of the key (it is ``Trace.remove_response``'s water-level
+        inversion).
+        """
+        key = (id(response), delta, nfft, output, water_level)
+        hit = self._by_key.get(key)
+        if hit is None:
+            if len(self._by_key) >= self._max_entries:
+                # FIFO: the working set is one pass over the array, so dropping
+                # the oldest entry is enough to bound memory.
+                self._by_key.pop(next(iter(self._by_key)))
+            hit = (response, invert())
+            self._by_key[key] = hit
+            self.misses += 1
+        else:
+            self.hits += 1
+        return hit[1]
+
+    def __len__(self) -> int:
+        return len(self._by_key)
+
+
+def build_cached_remover(inventory, cache: ResponseCache, output: str = "VEL",
+                         water_level: float = 60.0, zero_mean: bool = True,
+                         taper: bool = True, taper_fraction: float = 0.05):
+    """Return ``remove(tr)``: ``Trace.remove_response`` with a cached response.
+
+    Mirrors the evalresp branch of ``obspy.core.trace.Trace.remove_response``
+    step for step — mean removal, cosine taper, ``rfft(nfft)``, multiply by the
+    inverted response, DC/Nyquist fix-up, ``irfft`` back to ``npts`` — but the
+    response itself is evaluated at most once per channel.  Verified to match
+    obspy sample for sample.  The only intended difference is that obspy's
+    ``_add_processing_info`` decorator also appends a ``stats.processing`` entry,
+    which MSEED does not persist and nothing downstream reads.
+    """
+    import numpy as np
+    from obspy.core.inventory.response import PolynomialResponseStage
+    from obspy.signal.invsim import cosine_taper, invert_spectrum
+    from obspy.signal.util import _npts2nfft
+
+    def invert_response(response, delta, nfft):
+        freq_response, _freqs = response.get_evalresp_response(
+            delta, nfft, output=output)
+        if water_level is None:
+            # No water level: invert directly (first entry is 0 Hz → keep 0).
+            freq_response[0] = 0.0
+            freq_response[1:] = 1.0 / freq_response[1:]
+        else:
+            invert_spectrum(freq_response, water_level)
+        return freq_response
+
+    def remove(tr) -> None:
+        response = inventory.get_response(tr.id, tr.stats.starttime)
+        if (not response.response_stages
+                or isinstance(response.response_stages[0],
+                              PolynomialResponseStage)):
+            # Polynomial/linear responses take a different obspy branch: let
+            # obspy handle those (rare, and not cacheable this way).
+            tr.remove_response(inventory=inventory, output=output,
+                               water_level=water_level)
+            return
+        npts = len(tr.data)
+        nfft = _npts2nfft(npts)
+        inv_resp = cache.get(response, tr.stats.delta, nfft, output,
+                             water_level,
+                             lambda: invert_response(response, tr.stats.delta,
+                                                     nfft))
+        data = tr.data.astype(np.float64)
+        if zero_mean:
+            data -= data.mean()
+        if taper:
+            data *= cosine_taper(npts, taper_fraction, sactaper=True,
+                                 halfcosine=False)
+        spec = np.fft.rfft(data, n=nfft)
+        spec *= inv_resp
+        spec[-1] = abs(spec[-1]) + 0.0j
+        tr.data = np.fft.irfft(spec)[0:npts]
+
+    return remove
 
 
 def parse_filter(spec: str):
@@ -62,36 +173,59 @@ def main() -> None:
     f_lo, f_hi = parse_filter(args.filter)
     out = ensure_dir(args.output)
 
+    timer = CumulativeTimer()
+    cache: ResponseCache | None = None
+    remove_response = None
+    if inventory is not None and args.remove_response:
+        cache = ResponseCache()
+        try:
+            remove_response = build_cached_remover(inventory, cache)
+        except ImportError as exc:  # pragma: no cover - obspy internals moved
+            # Never silently change the result: fall back to obspy's own (slow)
+            # implementation if its private helpers are unavailable.
+            warn(f"cached response removal unavailable ({exc}); "
+                 f"falling back to Trace.remove_response")
+
     n_in = 0
     n_ok = 0
     n_resp_removed = 0
     failed = []
     for f in files:
-        try:
-            st = read(str(f))
-        except Exception as exc:
-            warn(f"unreadable file skipped: {f} ({exc})")
-            failed.append(f.name)
-            continue
+        with timer.step("read mseed"):
+            try:
+                st = read(str(f))
+            except Exception as exc:
+                warn(f"unreadable file skipped: {f} ({exc})")
+                failed.append(f.name)
+                continue
         n_in += len(st)
         drop = []
         for tr in st:
             try:
                 if args.detrend:
-                    tr.detrend("linear")  # 去除线性趋势
+                    with timer.step("detrend linear"):
+                        tr.detrend("linear")  # 去除线性趋势
                 if args.demean:
-                    tr.detrend("demean")  # 去除均值
+                    with timer.step("demean"):
+                        tr.detrend("demean")  # 去除均值
                 if inventory is not None and args.remove_response:  # 去仪器响应
-                    tr.remove_response(inventory=inventory, output="VEL", water_level=60)
+                    with timer.step("remove response"):
+                        if remove_response is not None:
+                            remove_response(tr)
+                        else:
+                            tr.remove_response(inventory=inventory,
+                                               output="VEL", water_level=60)
                     # obspy 不会自动设置 units；手动标记，供下游阶段参考。
                     # 注意 MSEED 不保存该属性，p07 必须显式声明 --assume-units。
                     tr.stats.units = "M/S"
                     n_resp_removed += 1
-                tr.filter("bandpass", freqmin=f_lo, freqmax=f_hi, corners=4, #带通滤波
-                          zerophase=True)
+                with timer.step("bandpass filter"):
+                    tr.filter("bandpass", freqmin=f_lo, freqmax=f_hi, corners=4, #带通滤波
+                              zerophase=True)
                 # resample via decimation/interpolation to target rate
                 if abs(tr.stats.sampling_rate - args.resample) > 0.01:
-                    tr.resample(args.resample)
+                    with timer.step("resample"):
+                        tr.resample(args.resample)
                 n_ok += 1
             except Exception as exc:
                 warn(f"trace failed: {tr.id} ({exc})")
@@ -102,17 +236,31 @@ def main() -> None:
             st.remove(tr)
         if len(st) > 0:
             sub_out = out / f.name.replace(Path(f.name).suffix, ".mseed")
-            st.write(str(sub_out), format="MSEED")
+            with timer.step("write mseed"):
+                st.write(str(sub_out), format="MSEED")
 
     log(f"Processed {n_ok}/{n_in} traces -> {out}; "
         f"response removed on {n_resp_removed} traces")
+    if cache is not None:
+        # 命中率解释了 P2 的耗时：只有 misses 次 evalresp 真正被计算
+        log(f"instrument response cache: {cache.misses} evaluated, "
+            f"{cache.hits} reused ({len(cache)} distinct channels)")
+    timer.log_summary("Phase 2 内部步骤耗时")
+    timing_payload = {"timings": timer.to_dict()}
+    if cache is not None:
+        timing_payload["response_cache"] = {
+            "distinct_channels": len(cache),
+            "responses_evaluated": cache.misses,
+            "responses_reused": cache.hits,
+        }
     frac_failed = (len(failed) / n_in) if n_in else 1.0
     status = "ok"
     if frac_failed > 0.10:
         status = "error"
         fail(f"{len(failed)}/{n_in} traces failed (>10%)",
              n_traces_input=n_in, n_traces_processed=n_ok,
-             n_traces_failed=len(failed), failed=failed[:50])
+             n_traces_failed=len(failed), failed=failed[:50],
+             **timing_payload)
         return
 
     # response_removed 反映"实际成功去响应的 trace 比例"，而不是"inventory 是否加载成功"
@@ -120,7 +268,8 @@ def main() -> None:
     if args.remove_response and n_resp_removed == 0:
         fail("--remove-response requested but no trace was deconvolved",
              n_traces_input=n_in, n_traces_processed=n_ok,
-             n_traces_failed=len(failed), failed=failed[:50])
+             n_traces_failed=len(failed), failed=failed[:50],
+             **timing_payload)
         return
 
     if not args.remove_response:
@@ -147,6 +296,7 @@ def main() -> None:
         "detrend": args.detrend,
         "demean": args.demean,
         "output_dir": str(out),
+        **timing_payload,
     })
 
 

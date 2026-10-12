@@ -1,0 +1,63 @@
+{
+  "status": "ok",
+  "passed": 11,
+  "failed": 0,
+  "checks": [
+    {
+      "check": "P1 raw staged",
+      "ok": true,
+      "detail": "11 miniSEED files"
+    },
+    {
+      "check": "P1 radius CLI contract",
+      "ok": true,
+      "detail": "2 checks, failed=[]"
+    },
+    {
+      "check": "P0 obspy+seisbench",
+      "ok": true,
+      "detail": "backends={'nll': False, 'hypodd': True}"
+    },
+    {
+      "check": "pipeline status ok",
+      "ok": true,
+      "detail": "completed=['preprocess', 'pick', 'associate', 'locate', 'hypodd', 'magnitude', 'qc']"
+    },
+    {
+      "check": "CP2 preprocessed",
+      "ok": true,
+      "detail": "11 files"
+    },
+    {
+      "check": "CP3 picks",
+      "ok": true,
+      "detail": "644 picks (json n_picks=644)"
+    },
+    {
+      "check": "CP4 association",
+      "ok": true,
+      "detail": "11 events (json n_events=11)"
+    },
+    {
+      "check": "CP5 located >=50%",
+      "ok": true,
+      "detail": "11/11 located"
+    },
+    {
+      "check": "CP7 final catalog",
+      "ok": true,
+      "detail": "columns=['event_id', 'time', 'latitude', 'longitude', 'depth_km', 'n_picks', 'rms_s', 'relocation', 'magnitude', 'magnitude_type', 'n_stations_used']"
+    },
+    {
+      "check": "CP8 qc artifacts",
+      "ok": true,
+      "detail": "5 PNGs + report.md=yes"
+    },
+    {
+      "check": "CP8 timing in log+report",
+      "ok": true,
+      "detail": "timings.json=yes, report 耗时=yes, log ELAPSED=yes"
+    }
+  ],
+  "workspace": "C:\\Users\\Admin\\Desktop\\Geophysics\\tests\\tmp_data\\verify_ws"
+}

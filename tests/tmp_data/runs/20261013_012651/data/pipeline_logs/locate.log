@@ -1,0 +1,30 @@
+{
+  "status": "ok",
+  "backend": "python-geiger",
+  "n_events_input": 11,
+  "n_located": 11,
+  "catalog_file": "data\\locate\\catalog_abs.csv",
+  "velocity_model": "C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\assets\\iasp91.tvel",
+  "cell_km": 5.0,
+  "note": "1-D model Geiger iteration (damped weighted least squares); depth error typically 2-5 km",
+  "elapsed_s": 1.429
+}
+
+---STDERR---
+[INFO] Loaded 11 events, 644 picks, 157 stations, 6 velocity layers
+[INFO] Using 389 GaMMA pick assignments from data\assoc\assignments.csv
+[INFO] ev000001: lat=35.603 lon=-120.928 dep=5.8km rms=1.22s (92 obs, 6 iter)
+[INFO] ev000002: lat=35.586 lon=-120.832 dep=13.5km rms=1.37s (56 obs, 12 iter)
+[INFO] ev000003: lat=35.570 lon=-120.820 dep=13.6km rms=1.18s (37 obs, 19 iter)
+[INFO] ev000004: lat=35.569 lon=-120.799 dep=14.3km rms=1.97s (24 obs, 16 iter)
+[INFO] ev000005: lat=35.570 lon=-120.768 dep=14.3km rms=0.97s (34 obs, 22 iter)
+[INFO] ev000006: lat=35.567 lon=-120.794 dep=13.6km rms=1.17s (27 obs, 20 iter)
+[INFO] ev000007: lat=35.623 lon=-120.882 dep=9.6km rms=0.70s (24 obs, 8 iter)
+[INFO] ev000008: lat=35.567 lon=-120.768 dep=11.7km rms=1.46s (32 obs, 8 iter)
+[INFO] ev000009: lat=35.556 lon=-120.789 dep=11.5km rms=1.59s (24 obs, 16 iter)
+[INFO] ev000010: lat=35.570 lon=-120.812 dep=13.8km rms=0.62s (17 obs, 3 iter)
+[INFO] ev000011: lat=35.512 lon=-120.764 dep=15.1km rms=1.43s (22 obs, 9 iter)
+[INFO] 脚本耗时: 1.43 s
+
+---ELAPSED---
+1.782 s

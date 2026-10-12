@@ -1,0 +1,76 @@
+{
+  "status": "ok",
+  "n_traces_input": 5002,
+  "n_traces_processed": 5002,
+  "n_traces_failed": 0,
+  "failed": [],
+  "filter_hz": [
+    0.5,
+    20.0
+  ],
+  "resample_hz": 100.0,
+  "remove_response_requested": true,
+  "n_traces_response_removed": 5002,
+  "response_removed": true,
+  "output_units": "M/S",
+  "detrend": true,
+  "demean": true,
+  "output_dir": "data\\preprocessed",
+  "timings": {
+    "total_s": 71.405,
+    "steps": [
+      {
+        "name": "read mseed",
+        "seconds": 1.476,
+        "count": 11
+      },
+      {
+        "name": "detrend linear",
+        "seconds": 7.104,
+        "count": 5002
+      },
+      {
+        "name": "demean",
+        "seconds": 5.291,
+        "count": 5002
+      },
+      {
+        "name": "remove response",
+        "seconds": 39.357,
+        "count": 5002
+      },
+      {
+        "name": "bandpass filter",
+        "seconds": 11.684,
+        "count": 5002
+      },
+      {
+        "name": "write mseed",
+        "seconds": 2.852,
+        "count": 11
+      }
+    ]
+  },
+  "response_cache": {
+    "distinct_channels": 513,
+    "responses_evaluated": 513,
+    "responses_reused": 4489
+  },
+  "elapsed_s": 73.887
+}
+
+---STDERR---
+[INFO] Loaded station inventory from data/stations/stations.xml
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\obspy\io\mseed\core.py:1034: UserWarning: The encoding specified in trace.stats.mseed.encoding does not match the dtype of the data.
+A suitable encoding will be chosen.
+  warnings.warn(msg, UserWarning)
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\obspy\io\mseed\core.py:1087: UserWarning: File will be written with more than one different record lengths.
+This might have a negative influence on the compatibility with other programs.
+  warnings.warn(msg % 'record lengths')
+[INFO] Processed 5002/5002 traces -> data\preprocessed; response removed on 5002 traces
+[INFO] instrument response cache: 513 evaluated, 4489 reused (513 distinct channels)
+[INFO] Phase 2 内部步骤耗时: 总计 1 m 11 s（read mseed ×11 1.48 s、detrend linear ×5002 7.10 s、demean ×5002 5.29 s、remove response ×5002 39.36 s、bandpass filter ×5002 11.68 s、write mseed ×11 2.85 s）
+[INFO] 脚本耗时: 1 m 14 s
+
+---ELAPSED---
+74.522 s

@@ -1,0 +1,92 @@
+{
+  "status": "ok",
+  "n_events": 11,
+  "map_backend": "cartopy",
+  "map_layers": [
+    "ocean",
+    "land",
+    "coastline",
+    "country_borders",
+    "province_borders"
+  ],
+  "mc": 2.05,
+  "b_value": NaN,
+  "mean_rms_s": 1.2431,
+  "report_file": "data\\qc\\report.md",
+  "plots": [
+    "epicenter_map.png",
+    "gr_relation.png",
+    "depth_histogram.png",
+    "residuals.png",
+    "pick_samples.png"
+  ],
+  "pick_samples": {
+    "event": 0,
+    "n_stations": 109,
+    "window_s": 207.2,
+    "window_auto": true,
+    "stations_plotted": 109,
+    "picks_plotted": 124,
+    "picks_off_window": 0
+  },
+  "timings": {
+    "total_s": 23.257,
+    "steps": [
+      {
+        "name": "P8 epicenter map",
+        "seconds": 2.331
+      },
+      {
+        "name": "P8 G-R relation",
+        "seconds": 0.293
+      },
+      {
+        "name": "P8 depth histogram",
+        "seconds": 0.141
+      },
+      {
+        "name": "P8 residuals",
+        "seconds": 0.175
+      },
+      {
+        "name": "P8 pick samples",
+        "seconds": 20.239
+      },
+      {
+        "name": "P8 report",
+        "seconds": 0.054
+      }
+    ]
+  },
+  "elapsed_s": 23.711
+}
+
+---STDERR---
+[INFO] Loaded phase timings from C:\Users\Admin\Desktop\Geophysics\tests\tmp_data\verify_ws\data\pipeline_logs\timings.json
+[INFO] Plotting epicenter map...
+[WARN] PyGMT unavailable (Error loading GMT shared library at 'gmt.dll'.
+Could not find module 'gmt.dll' (or one of its dependencies). Try using the full path with constructor syntax.
+Error loading GMT shared library at 'gmt_w64.dll'.
+Could not find module 'gmt_w64.dll' (or one of its dependencies). Try using the full path with constructor syntax.
+Error loading GMT shared library at 'gmt_w32.dll'.
+Could not find module 'gmt_w32.dll' (or one of its dependencies). Try using the full path with constructor syntax.); falling back to Matplotlib/Cartopy
+[INFO] P8 epicenter map: 2.33 s
+[INFO] Epicenter map drawn by cartopy: ocean, land, coastline, country_borders, province_borders
+[INFO] Computing G-R relation...
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p08_qc_and_plot.py:276: RuntimeWarning: divide by zero encountered in log10
+  A = np.polyfit(centers[sel], np.log10(cum[sel]), 1)
+[INFO] P8 G-R relation: 0.29 s
+[INFO] Plotting depth histogram...
+[INFO] P8 depth histogram: 0.14 s
+[INFO] Plotting residuals...
+[INFO] P8 residuals: 0.18 s
+[INFO] Plotting PhaseNet picking samples (mainshock)...
+[INFO] pick window auto-sized to 207 s (event #0 spans 202 s)
+[INFO] P8 pick samples: 20.24 s
+[INFO] Phase 8 内部步骤耗时: 总计 23.20 s（P8 epicenter map 2.33 s，P8 G-R relation 0.29 s，P8 depth histogram 0.14 s，P8 residuals 0.17 s，P8 pick samples 20.24 s）
+[INFO] Magnitude diagnostics: single-station ML summarised for 11/11 events
+[INFO] P8 report: 0.05 s
+[INFO] 脚本耗时: 23.71 s
+
+---ELAPSED---
+24.813 s

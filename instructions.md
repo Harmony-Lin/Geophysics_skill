@@ -171,6 +171,7 @@ metadata:
 4. **argparse/click 参数解析**：自带 `--help`，Agent 可探测用法
 5. **零交互**：不等待键盘输入、不弹确认框
 6. **Fortran/C 程序的包装器模式**：脚本负责"JSON 配置 → 生成原生输入文件 → 运行二进制 → 解析输出 → 转 JSON"，LLM 永远不直接接触 HypoDD/NLL 的古老格式
+7. **耗时可见**：脚本总耗时由 `common.run_main` 打到 stderr（`脚本耗时: ...`），`emit` 的 JSON 里带 `elapsed_s`；多步骤脚本用 `common.StepTimer` 逐步计时（`with timer.step("...")` + `timer.log_summary()`），循环内重复的小步骤用 `common.CumulativeTimer` 按名字累加（条目多一个 `count`），一键流水线另外把各阶段耗时写入 `data/pipeline_logs/timings.json` 并追加到 `<阶段>.log` 的 `---ELAPSED---` 段；阶段自报的 `timings` 会随该阶段进入 `timings.json`，P8 汇总进 QC 报告时按阶段展开成"内部步骤"明细
 
 示例接口契约：
 
