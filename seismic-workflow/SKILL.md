@@ -68,52 +68,85 @@ python scripts/p00_detect_env.py
 
 ### 场景 A：从 FDSN 数据中心下载
 
-#### 步骤 1：解析用户提供的地震事件信息
+Phase 1 明确分为两步，**不要混在一起做**：
+
+1. **先确定事件**（步骤 1–3）：把用户的话变成约束 → 用 `scripts/p01_resolve_event.py`
+   在 FDSN 权威目录里解析出唯一事件，并得到一份现成的下载计划；信息不足或存在歧义时
+   **必须先问用户**。
+2. **再下载数据**（步骤 4–5）：用 `download_plan` 执行
+   `scripts/p01_fetch_waveforms.py`，按震中距挑选台站并下载波形 + 台站响应。
+
+#### 步骤 1：从用户的话里抽取约束
 
 用户可能提供以下任意形式的信息，你需要提取关键参数：
 
-- **事件 ID/编号**：如 USGS `us7000abcd`、EMSC `20240101_123456`、中国地震台网 `20240101123456`
-- **发震时间**：UTC 时间，精确到秒（如 `2024-01-01T12:34:56`）
-- **震中位置**：经纬度（如 `35.6°N, 139.8°E`）或地名（如 "能登半岛"）
-- **震级**：Mw/Ms/Ml 等（如 `Mw 7.6`）
+- **事件 ID/编号**：如 USGS `us7000abcd`、NCEDC `nc75265261`、EMSC `20240101_123456`
+- **发震时间**：UTC 时间（如 `2024-01-01T12:34:56`）或日期+时段
+- **震中位置**：经纬度或地名/区域（如 "能登半岛"、"加州 Templeton 附近"）
+- **震级**：Mw/Ms/Ml 等（如 `Mw 7.6`）或强度描述（"7 级左右"）
 - **研究目的**：主震定位、余震序列、前震分析、背景噪声等
 
-**若用户仅提供模糊描述（如"2024年能登地震"），必须上网检索权威目录确定精确参数。**
+**信息不足时必须先问用户**：如果用户的描述无法唯一确定一个事件（既无事件 ID，也无具体
+时间/地区/震级，例如"上次那个大地震"），先向用户提一个具体问题补齐信息，再进入步骤 2。
+不要凭猜测挑一个事件就下载。
 
-#### 步骤 2：上网检索权威地震目录，确定精确时间区间与空间范围
+#### 步骤 2：用脚本在权威目录里解析出唯一事件
 
-| 目录平台                      | 访问方式                                                                                           | 适用场景           | 检索关键字段                                                                        |
-| ----------------------------- | -------------------------------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------- |
-| **USGS ComCat**         | `https://earthquake.usgs.gov/earthquakes/search/` 或 FDSN `event` 服务                         | 全球、M4.5+ 主震   | `eventid`, `time`, `latitude`, `longitude`, `depth`, `mag`, `magType` |
-| **EMSC**                | `https://www.emsc-csem.org/Earthquake/` 或 `https://www.seismicportal.eu/fdsnws/event/1/query` | 欧地中海、全球实时 | `unid`, `time`, `lat`, `lon`, `depth`, `magnitude`                      |
-| **ISC Bulletin**        | `https://www.isc.ac.uk/bulletin/search/`                                                         | 重新定位、参考深度 | `eventId`, `time`, `lat`, `lon`, `depth`, `magnitude`                   |
-| **中国地震台网 (CENC)** | `http://www.ceic.ac.cn/` 或 `http://data.earthquake.cn/fdsnws/event/1/query`                   | 中国及周边区域     | `eventid`, `time`, `latitude`, `longitude`, `depth`, `magnitude`        |
-| **GCMT**                | `https://www.globalcmt.org/`                                                                     | 震源机制、矩张量   | `eventname`, `time`, `lat`, `lon`, `depth`, `Mw`                        |
+```bash
+python scripts/p01_resolve_event.py --text "2024年1月1日 日本能登半岛 7.6级地震"
+```
 
-**检索操作指引（Agent 执行）：**
+可用输入（至少提供一个）：`--text`（自由文本/地名，交给 FDSN 事件服务全文检索）、
+`--event-id`、`--start/--end`、`--latitude/--longitude [--within-km]`、
+`--min-magnitude`、`--event-datacenter`（默认依次查 `USGS`→`ISC`→`EMSC`）。
 
-1. 使用浏览器工具访问上述平台，搜索用户提供的关键词（时间、地名、震级）
-2. 确认**唯一匹配事件**，记录：`event_id`、`origin_time (UTC)`、`lat/lon`、`depth`、`magnitude`、`mag_type`
-3. **确定下载时间窗**：
-   - 主震研究（默认）：`origin_time - 60s` 到 `origin_time + 300s`（含 P/S 波完整波形）
-   - 余震序列（若用户明确指定）：`origin_time - 86400s` (1天前) 到 `origin_time + 7天`，或用户指定时长
-   - 背景噪声/前震：事件前 1-7 天连续波形
-4. **确定空间范围**：以震中为中心，根据震级估算最大关注距离：
-   - M < 4.0：50-100 km
-   - M 4.0-5.5：100-200 km
-   - M 5.5-7.0：200-500 km
-   - M > 7.0：500-1000+ km（考虑面波传播）
+**如果你已经用浏览器工具查到了事件 ID，优先用 `--event-id`**（一次命中，最省时间）；
+把 `--text` 留给"只有地名+时间"的情形。
+
+读 stdout JSON 的 `resolution` 字段，按下表行动：
+
+| `resolution`        | `needs_user_input` | 你的动作                                                       |
+| ------------------- | ------------------ | -------------------------------------------------------------- |
+| `resolved`        | `false`          | 已唯一确定，直接用 `download_plan` 进入步骤 4                  |
+| `resolved`        | `true`           | 脚本按震级自动挑出了主震，先把 `question` 念给用户确认        |
+| `ambiguous`       | `true`           | 把 `question` 与候选列表 (`candidates`) 交给用户选择         |
+| `not_found`       | `true`           | 按 `question` 让用户补充信息；或改换 `--text` 关键词再试一次 |
+| `insufficient_input` | `true`          | 按 `question` 向用户索取缺失的参数（时间/地区/事件 ID）      |
+
+**你必须把 `question` 真正念给用户并等待回答**，不得自行假定；用户确认后再继续。
+
+`event` 字段是权威参数（`event_id`、`origin_time`、`latitude`、`longitude`、
+`depth_km`、`magnitude`、`place`），后续步骤一律以它为准。
+`download_plan` 里已经给好时间窗、震中距、通道和推荐数据中心，**直接照抄即可**。
+
+#### 步骤 2b：（可选）联网检索补充权威参数
+
+脚本已经查过 FDSN 事件目录，通常不需要再联网。仅当出现下列情况时用浏览器工具补充：
+
+| 平台                    | 用途                              |
+| ----------------------- | --------------------------------- |
+| USGS ComCat             | 全球 M4.5+，看 `eventid` 与目录 |
+| ISC Bulletin            | 重新定位、参考深度                |
+| EMSC (`seismicportal.eu`) | 欧地中海、实时事件              |
+| GCMT                    | 震源机制、`Mw`                  |
+| 中国地震台网 (CEIC)     | 中国及周边事件的官方参数          |
+
+核实后把坐标/时间/震级**回填给 `p01_resolve_event.py`**（`--start --end --latitude
+--longitude --min-magnitude`）重新解析一次，让脚本自己确定唯一事件，不要手工拼下载命令。
 
 #### 步骤 3：选择合适的台网与数据中心
 
-| 目标区域               | 推荐数据中心 (优先级)                                  | 推荐台网代码                                           | 说明                  |
-| ---------------------- | ------------------------------------------------------ | ------------------------------------------------------ | --------------------- |
-| **全球/美国**    | IRIS (1), USGS (2)                                     | `IU`, `II`, `US`, `TA`, `AK`, `CN`, `IU` | GSN/USArray 覆盖全球  |
-| **欧洲/地中海**  | ORFEUS/EIDA (1), GFZ (2), INGV (3)                     | `GE`, `GR`, `HT`, `IV`, `MN`, `Z3`         | 欧洲密集台网          |
-| **中国大陆**     | CENC`http://data.earthquake.cn/fdsnws` (1), IRIS (2) | `CN`, `CD`, `BJ`, `XJ`, `XM`, `HK`         | 中国国家台网+区域台网 |
-| **日本**         | NIED (1), IRIS (2)                                     | `JP`, `JU`, `VU`, `XJ`                         | Hi-net, F-net, K-NET  |
-| **台湾**         | CWB (1), IRIS (2)                                      | `TW`, `TA`, `TP`                                 | 中央气象局台网        |
-| **全球通用备选** | IRIS (聚合全球 FDSN)                                   | `*` (所有可用)                                       | 兜底方案，速度较慢    |
+| 目标区域               | 推荐数据中心 (`--datacenter`，实测可用)          | 推荐台网代码                                           | 说明                                             |
+| ---------------------- | -------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------ |
+| **美国加州**     | `NCEDC,SCEDC,IRIS`                               | `BK`, `CI`, `NC`, `PG`, `SB`                     | NCEDC/SCEDC 台站与波形最全，首选               |
+| **美国其他/Alaska** | `IRIS`                                           | `US`, `TA`, `AK`, `CN`                           | EarthScope 覆盖全国                            |
+| **日本**         | `IRIS`, `GEONET`                                 | `JP`, `JU`, `VU`, `XJ`, `PS`                     | **Hi-net/K-NET 不开放 FDSN**；靠 IRIS 镜像的 F-net/JP |
+| **台湾**         | `IRIS`, `GEONET`                                 | `TW`, `TA`, `TP`                                 | 中央气象局台网经 IRIS 分发                     |
+| **中国大陆**     | `IRIS`                                           | `CB`, `KC`, `G`, `II`, `IC`                      | **CENC 的 FDSN 端口已失效**；大陆台站稀疏     |
+| **欧洲/地中海**  | `EIDA`, `RESIF`, `IRIS`                          | `GE`, `GR`, `HT`, `IV`, `MN`, `CH`               | `GFZ`/`INGV` 端点当前不可达，用 EIDA/RESIF 兜底 |
+| **新西兰**       | `GEONET`, `IRIS`                                 | `NZ`, `IU`                                       | GeoNet FDSN 可用                               |
+| **南美**         | `IRIS`, `USP`                                    | `BL`, `IU`, `BR`                                 | 覆盖偏疏，需放大 `--max-radius`              |
+| **全球通用备选** | `IRIS`（EarthScope 聚合）                         | `*` (所有可用)                                       | 兜底方案，速度较慢                             |
 
 **台网选择策略：**
 
@@ -121,44 +154,76 @@ python scripts/p00_detect_env.py
 2. **补充全球台网 (IU/II/GE)** 用于远场记录和深度约束
 3. **通道选择**：优先 `BH*` (宽频带, 20-100 Hz) > `HH*` (高增益, 100 Hz) > `EH*` (极高增益) > `SH*` (强震)
 4. **避免选择**：临时实验台网 (如 `XA`, `XB` 等，除非用户明确要求)、已知噪声大的台站
+5. `--datacenter` **支持逗号分隔的多数据中心**，脚本按顺序取"第一个声明该台站的数据中心"，
+   不会重复下载同一通道。推荐的组合已在 `download_plan.datacenters` 里给好。
 
-#### 步骤 4：构造下载命令
+> **注意**：上面的可用性是对 2025 年实测的结论。`GEOFON`/`GFZ`/`INGV`/`ORFEUS`/`KNMI`/
+> `NIEP`/`NIED`(`hinet.bosai.go.jp`, `fnet.bosai.go.jp`) 与 `data.earthquake.cn` 的 FDSN
+> 端口当前均不可用；遇到时不要反复重试，直接换 `IRIS`/`EIDA`/`NCEDC`。
+> 某个数据中心失败**不会**中断下载，最终 JSON 的 `request_failures` 会列出原因。
+
+#### 步骤 4：执行下载命令
+
+**直接执行 `download_plan.argv` / `download_plan.command`**（推荐），或按下面的模板自己拼：
 
 ```bash
 python scripts/p01_fetch_waveforms.py \
-  --network "CN,IU,II" --station "*" --channel "BH*,HH*" \
+  --network "*" --station "*" --channel "BH*,HH*" \
   --start "2024-01-01T12:33:00" --end "2024-01-01T12:40:00" \
-  --out data/raw --stations-out data/stations \
-  --datacenter IRIS \
+  --latitude 37.5 --longitude 137.2 \
   --min-radius 0 --max-radius 500 \
-  --latitude 37.5 --longitude 137.2
+  --datacenter IRIS,GEONET \
+  --out data/raw --stations-out data/stations \
+  --max-stations 60
 ```
 
 **关键参数说明：**
 
-- `--network`：逗号分隔的台网代码列表（如 `CN,JP,IU`）
-- `--station`：台站代码，`*` 表示全部；可指定如 `N.AKIH,N.KTKB`
+- `--network` / `--station`：台网/台站代码或通配符；**按震中距选台时用 `"*"`**
 - `--channel`：通道模式，推荐 `BH*,HH*` 覆盖宽频带和高增益
-- `--start/--end`：UTC 时间，**必须基于步骤 2 确定的精确时间窗**
-- `--min-radius/--max-radius`：震中距范围（度或 km，脚本自动换算），基于步骤 2 估算
-- `--latitude/--longitude`：震中坐标，**必须基于步骤 2 检索的权威坐标**
-- `--datacenter`：按步骤 3 选择；中国区域**首选 CENC FDSN**，海外首选 IRIS
+- `--start/--end`：UTC 时间，**必须来自 `download_plan`（已按事件时刻和模式算好）**
+- `--latitude/--longitude`：震中坐标，**必须来自 `resolved_event`**
+- `--min-radius/--max-radius`：**震中距范围，单位默认为 km**（`--radius-unit deg` 可切回
+  FDSN 原生的"度"）。台站筛选在本地按 km 精确过滤，因此 `--max-radius 500` 就是 500 km。
+- `--max-stations`：只保留最近的 N 个台站。**强烈建议设置**：`--max-radius 500` 且
+  `--network "*"` 时很容易匹配到上千个通道，下载时间和磁盘都会失控。
+  **注意"最近的"不等于"有数据的"**（高增益/加速度通道经常没归档）：若这 N 个台站返回
+  空数据，脚本会自动放宽到 2N、4N 再试，最终 JSON 的 `max_stations_used` 会告诉你实际
+  用到的是哪一档。
+- `--datacenter`：逗号分隔的多个数据中心，按顺序回退（如 `NCEDC,SCEDC,IRIS`）
+- `--station-level`：默认 `response`，**不要改**（Phase 2 去响应依赖它）
+- `--location`：默认 `*`；需要限定空定位码时用 `--location ""`
 
-**仪器响应自动下载**：脚本内部使用 `level="response"` 调用 `get_stations()`，**自动下载完整的 StationXML（含仪器响应 Poles/Zeros/Gain/Sensitivity）**，保存为 `data/stations/stations.xml`。Phase 2 的 `--remove-response` 直接读取此文件进行去响应，**无需额外操作**。
+**两种下载模式（互斥）：**
 
-常用 `--datacenter` 取值：`IRIS`、`USGS`、`INGV`、`GFZ`、`NIED`、`EIDA`、`CENC` (即 `http://data.earthquake.cn/fdsnws`)。
+- **震中距模式（推荐）**：给 `--latitude/--longitude` + `--min-radius/--max-radius`，
+  `--network "*"` 让脚本自己找台站；
+- **模式匹配模式**：不给经纬度，用明确的 `--network`/`--station` 直接请求。
+
+**仪器响应自动下载**：脚本使用 `level="response"` 调用 `get_stations()`，**自动下载完整的
+StationXML（含仪器响应 Poles/Zeros/Gain/Sensitivity）**，保存为 `data/stations/stations.xml`，
+并由它派生 `stations.csv`。Phase 2 的 `--remove-response` 直接读取此文件，**无需额外操作**。
 
 #### 步骤 5：执行下载并验证
 
-运行上述命令，检查 stdout JSON：
+检查 stdout JSON：
+
 - `status=="ok"` 且 `n_files>0`、`n_stations>0` → 成功，**同时产出 `data/stations/stations.xml`（含响应）和 `stations.csv`**
-- `error` 含 "no data"：检查时间窗/台网/震中距是否过严，放宽后重试**一次**
-- 网络超时/连接失败：重试**一次**，再次失败后报告用户环境可能离线，建议切换场景 B
+- `max_stations_used` 大于 `max_stations_requested`：最近的 N 个台站没有数据，脚本已自动
+  放宽；把这个事实写进给用户的报告里。
+- `n_stations_downloaded`（真正拿到波形的台站数）明显小于 `n_stations_requested`：
+  单独看 `n_missing_channels` / `missing_channels`。少量缺失属正常（台站当时无数据、
+  或数据未归档）；**缺失比例 >50% 时**按 troubleshooting 处理。
+- `distance_km.min/max`：确认落在 `--min-radius`/`--max-radius` 之内；`max` 远小于
+  `--max-radius` 说明该区域台站稀疏，需要扩大半径或换数据中心。
+- `datacenter_stats` / `request_failures`：哪个数据中心给了多少台站、哪个失败了。
+- 报错 `no station found inside the requested annulus`：扩大 `--max-radius`、放宽
+  `--channel`（如 `BH*,HH*,EH*`）或换 `--datacenter` 后重试**一次**。
+- 网络超时/连接失败：重试**一次**，再次失败后报告用户环境可能离线，建议切换场景 B。
 
 **若 StationXML 下载失败**（stdout JSON 无 `stations_xml` 字段或 `n_stations=0`）：
-- Phase 2 必须去掉 `--remove-response`，Phase 7 给 `p99_run_pipeline.py` 加 `--no-stations`，震级计算 (ML) 将不可用，报告中需注明
-- **不要在缺少 StationXML 时保留 `--remove-response`**：p02 会直接失败（不再"警告后静默跳过"，否则 p07 会拿未物理化的 counts 算出看似正常的错误震级）
-- 事后可手动从数据中心网站下载 StationXML 放入 `data/stations/` 补救
+
+- 直接报错，让用户决定后续动作。
 
 ### 场景 B：用户明确指出本地已有波形文件
 
@@ -173,10 +238,12 @@ python scripts/p01_fetch_waveforms.py --from-local <波形目录> \
 
 **错误处理**：
 
-- FDSN 报无数据错误（JSON `error` 含 "no data"）：缩小时间窗或台站范围重试一次；仍失败则报告用户。
-- 网络超时：报告用户当前环境可能离线，建议使用场景 B。
+- `n_files_failed > 0`：stderr 的 `[WARN]` 会列出无法读取的文件；确认波形文件完整后重试一次。
+- `n_files == 0`：目录里没有可识别的 miniSEED/SAC 文件，向用户确认路径。
 
-**检查点 1**：确认 `data/raw/` 下文件数 = JSON `n_files` 且均 >0 字节后，报告用户，才进入 Phase 2。
+**检查点 1**：确认 `data/raw/` 下文件数 = JSON `n_files` 且均 >0 字节、`data/stations/stations.xml`
+与 `stations.csv` 均已生成后，报告用户，才进入 Phase 2。
+场景 A 还需报告 `n_stations_downloaded`（实际拿到波形的台站数）与 `distance_km` 范围。
 
 ## Phase 2: 数据预处理
 
@@ -385,7 +452,7 @@ python scripts/p07_compute_magnitude.py \
   - `VEL`（默认）——上游 p02 以 `output="VEL"` 去响应，正常流程用这个；
   - `DISP`——输入是位移，脚本会先微分回速度；
   - `COUNTS`——输入仍是原始计数，脚本在此处调用 `remove_response(output="VEL")`。
-  传错单位会得到量级完全错误的震级（约差 2–3 级），且不会报错。
+    传错单位会得到量级完全错误的震级（约差 2–3 级），且不会报错。
 - 脚本自身的 ML 结果会**覆盖**上游目录里的 `magnitude` / `magnitude_type`
   （本阶段是震级的唯一权威来源），并输出
   `catalog_final.magnitude_diag.csv`（逐台站的振幅/震中距/单台震级，便于排查）。

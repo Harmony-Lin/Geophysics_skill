@@ -6,6 +6,7 @@ FDSN data centres (EarthScope/NCEDC/SCEDC) via tests/fetch_templeton.py.
 
   0. detect_env.py        -> obspy & seisbench available
   1. raw waveforms staged -> n_files > 0 (real FDSN data; fetched if absent)
+     + Phase-1 radius CLI contract (tests/verify_fetch_event.py --offline)
   2-8. run_pipeline.py    -> checkpoints: preprocessed/, picks CSV,
        assoc events, located catalog, final catalog columns,
        qc report.md + 5 PNGs
@@ -264,6 +265,17 @@ def main() -> int:
         f"{len(raw_files)} miniSEED files")
 
     py = sys.executable
+
+    # --- Phase 1 CLI contract: radius selection must parse -------------
+    # Full radius/natural-language coverage lives in tests/verify_fetch_event.py
+    # (needs FDSN); here only the offline argument-parsing regression runs.
+    proc = run([py, ROOT / "tests" / "verify_fetch_event.py", "--offline"],
+               cwd=WS)
+    cli = parse_last_json(proc.stdout)
+    check("P1 radius CLI contract", proc.returncode == 0
+          and cli.get("status") == "ok" and cli.get("n_checks", 0) >= 1,
+          f"{cli.get('n_checks')} checks, failed={cli.get('failed')}"
+          if cli else proc.stderr[-300:])
 
     # --- Phase 0: environment detection ------------------------------
     proc = run([py, SCRIPTS / "p00_detect_env.py"], cwd=WS)

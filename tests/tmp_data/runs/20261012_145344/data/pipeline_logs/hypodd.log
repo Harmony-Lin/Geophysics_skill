@@ -1,0 +1,90 @@
+
+
+(ph2dt) starting ph2dt 12/10/2026 15:00:10
+No event.select file.
+reading phase file...
+> events total = 11
+> events selected = 11
+> phases = 558
+> P phases = 416
+> S phases = 142
+(ph2dt) Forming dtimes ...
+
+
+Building event-pair catalog.
+Stations used:  24
+> P-phase pairs total =  663
+> S-phase pairs total =  202
+> outliers =  43  ( 4.971098265895954 %)
+> phases at stations not in station list =  0
+> phases at distances larger than MAXDIST =  186
+> P-phase pairs selected =  459 ( 69.23076923076923 %)
+> S-phase pairs selected =  177 ( 87.62376237623762 %)
+> weakly linked events =  11 ( 100.0 %)
+> linked event pairs =  39
+> average links per pair =  16
+> average offset (km) betw. linked events =  4.445257724204248
+> average offset (km) betw. strongly linked events =  4.445257724204248
+> maximum offset (km) betw. strongly linked events =  9.593934327566604
+Output files: dt.ct; event.dat; event.sel; ph2dt.log
+ph2dt parameters were: 
+(maxdist,maxsep,maxngh,minlnk,minobs,maxobs)
+200.0 10.0 10 8 8 30
+ph2dt done 12/10/2026 15:00:10
+(ph2dt) Done with ph2dt. 
+
+
+
+Relocate all clusters.
+Relocate all events.
+(hypoDD) No clustering performed.
+ IT    EV   CT      RMSCT   RMSST   DX   DY   DZ   DT   OS   AQ   CND
+        %    %    ms      %    ms    m    m    m   ms    m
+ 1   1 100  100   517   -7.1     0  167   98  340   12  185    0     5
+ 2   2 100  100   488   -5.6     0  144   90  247    9  318    0     5
+ 3   3 100  100   464   -4.8     0  129   82  195    7  421    0     5
+ 4   4 100  100   444   -4.2     0  120   75  192    6  524    0     5
+ 5   5 100  100   428   -3.7     0  111   69  179    5  595    0     5
+
+
+(hypoDD) Total number of iteration loops:  5  time spent:  0:00:00.302127
+
+
+(hypoDD) Writing out results
+
+
+ Relocation Stats for Cluster  1
+        DX (m)       DY (m)       DZ (m)       DT (ms)
+Mean   222.408020 -102.635095 594.794909 1.642329
+Median 9.676984 -35.425942 1051.104673 0.490390
+RMS    1052.894793 505.943390 1263.943817 6.984484
+(hypoDD) writing update traveltime residuals to tt_res_final.txt
+Traveltime Residuals P for Cluster  1
+Mean: 0.023131, Median: -0.010214, RMS: 0.846388
+Traveltime Residuals S
+Mean: 0.040017, Median: -0.017670, RMS: 1.464251
+
+
+
+
+HypoDD Done 12/10/2026 15:00:10 
+
+
+{
+  "status": "ok",
+  "backend": "relocdd-py",
+  "n_events_input": 11,
+  "n_relocated": 11,
+  "n_events_output": 11,
+  "rms_before_s": 1.243,
+  "catalog_file": "data\\locate\\hypodd\\catalog_dd.csv",
+  "run_dir": "data\\locate\\hypodd",
+  "note": "events that ph2dt could not link keep their absolute hypocentre; see the `relocation` column"
+}
+
+---STDERR---
+[INFO] Step 1/4: preparing phase.dat / station.dat / control files...
+[INFO] phase.dat: 558 phase rows written, 54 picks dropped (duplicate station/phase or station absent from station.dat)
+[INFO] Step 2/4: running relocDD-py ph2dt...
+[INFO] Step 3/4: running relocDD-py hypoDD inversion...
+[INFO] Step 4/4: parsing hypoDD.reloc...

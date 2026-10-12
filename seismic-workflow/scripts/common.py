@@ -13,6 +13,24 @@ import traceback
 from pathlib import Path
 
 
+def _force_utf8_streams() -> None:
+    """Write stdout/stderr as UTF-8 regardless of the OS locale.
+
+    Windows defaults pipes to the ANSI code page (e.g. cp936), which garbles
+    non-ASCII JSON fields and raises UnicodeEncodeError on characters that code
+    page lacks (→, Δ, ≥ ...).  The stdout contract is "structured JSON", and JSON
+    is UTF-8, so the encoding is pinned here for every script.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except Exception:  # noqa: BLE001 - unusual/detached stream: keep default
+            pass
+
+
+_force_utf8_streams()
+
+
 def log(msg: str) -> None:
     """Human-readable log line to stderr."""
     print(f"[INFO] {msg}", file=sys.stderr)

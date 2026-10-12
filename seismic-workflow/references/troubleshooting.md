@@ -15,10 +15,39 @@
 
 ## Phase 1 数据获取
 
-| 报错 | 原因 | 处置 |
+### P1a 事件解析（`p01_resolve_event.py`）
+
+| JSON 现象 | 原因 | 处置 |
 |------|------|------|
-| `FDSN request failed ... no data` | 时间窗/台站组合无数据 | 缩小范围重试一次 |
-| `HTTPError 503` | 数据中心限流 | 等待后重试一次，仍失败换数据中心 |
+| `resolution="insufficient_input"` | 用户没给出可定位事件的最小信息 | 把 `question` 念给用户，等回答后带上参数重跑 |
+| `resolution="not_found"` | 关键词在该目录里查不到 | 换关键词（地名用英文/拼音、加上年份或震级）重跑一次；仍无则让用户给事件 ID |
+| `resolution="ambiguous"` + `needs_user_input=true` | 命中多个事件 | 把 `question` 与 `candidates` 交给用户选择，不要自己挑 |
+| `resolution="resolved"` 但 `needs_user_input=true` | 脚本按震级自动挑了主震 | 把 `question` 念给用户确认后再下载 |
+| `某目录: event query failed (ValueError: Could not parse ...)` | ISC/EMSC 的按 ID 查询返回非 QuakeML | 脚本已自动回退到时间窗查询；若仍失败，用 `--event-datacenter USGS` 或改用 `--text` |
+| `no event matches the query` | 参数组合过严 | 放宽 `--min-magnitude`、扩大 `--within-km` 或时间范围 |
+| 中文/`→` 输出乱码 | Windows 控制台默认 GBK | `common.py` 已强制 UTF-8；若仍乱码按 UTF-8 读取 stdout |
+
+### P1b 波形下载（`p01_fetch_waveforms.py`）
+
+| 报错/现象 | 原因 | 处置 |
+|------|------|------|
+| `no station found inside the requested annulus` | 该震中距范围内没有符合 `--channel` 的台站，或数据中心不覆盖该区域 | 按 JSON `hint` 扩大 `--max-radius`、放宽 `--channel`（`BH*,HH*,EH*`）或换 `--datacenter`，重试一次 |
+| 报错/现象 | 原因 | 处置 |
+|------|------|------|
+| `unrecognized arguments: --min-radius` | 脚本版本过旧（旧版 `p01_fetch_waveforms.py` 没有震中距参数） | 用仓库里当前的脚本，不要用拷贝出去的旧副本；`--help` 里应能看到 `epicentral radius selection` 参数组 |
+| `--max-radius must be larger than --min-radius` | 参数写反或单位搞错 | 检查是否把 km 当成了度：`--radius-unit deg` 时数值要按度给 |
+| `max_stations_used > max_stations_requested` | 最近的 N 个台站没有归档数据（高增益/加速度通道常见） | 属正常自动放宽；把实际用了多少台站写进给用户的报告 |
+| `FDSN returned an empty stream` 且 `hint` 提到 `--max-stations` | 限制台站数后所有档位都无数据 | 提高或去掉 `--max-stations`，或放宽 `--channel` / 换 `--datacenter` |
+| `ObsPyDeprecationWarning: IRIS` | `IRIS` 是旧别名 | 无害；新名称为 `EARTHSCOPE`，可改用后者消除告警 |
+| `FDSN returned an empty stream` | 查询成功但没有波形 | 看 `request_failures`；缩小时间窗/台站模式，或换数据中心重试一次 |
+| `n_stations` 很大 / 下载极慢 | `--network "*"` + 大半径匹配到上千通道 | 加 `--max-stations 60`（保留最近台站），或用更具体的 `--channel` |
+| `n_missing_channels` 占多数 | 台站有元数据但当时无数据（触发式记录、未归档） | 少量缺失正常；>50% 时换数据中心（如加州加 `NCEDC,SCEDC`）或缩小时段 |
+| `n_traces_with_response` 为 0 | StationXML 与波形不匹配 | 检查 `--station-level` 是否为 `response`；确认 `stations.xml` 覆盖下载的台站 |
+| `xxx: cannot initialise FDSN client` | 该数据中心临时故障或端点已失效 | 脚本对客户端初始化自动重试 3 次；仍失败就换数据中心（见 SKILL.md 数据中心表） |
+| `HTTPError 503` / 超时 | 数据中心限流 | 等待后重试一次；仍失败换数据中心，或加 `--timeout 300` |
+| `GEOFON`/`GFZ`/`INGV`/`ORFEUS`/`KNMI`/`NIED`/`CENC` 一直失败 | 这些 FDSN 端点当前不可用（实测：`data.earthquake.cn`、`hinet.bosai.go.jp`、`fnet.bosai.go.jp` 全部 404） | 不要反复重试，直接改用 `IRIS`(EarthScope) / `EIDA` / `NCEDC` / `SCEDC` / `RESIF` / `GEONET` |
+| 日本事件只能下到十几个台站 | Hi-net/K-NET (NIED) 不提供公开 FDSN | 属预期；靠 IRIS 上的 `JP`/`PS`/`G` 等台网，必要时扩大 `--max-radius` |
+| 中国大陆事件台站极少 | CENC FDSN 端口失效，IRIS 上大陆台站稀疏 | 属预期；扩大 `--max-radius`，或改用区域研究目标/本地数据（场景 B） |
 | 本地扫描 `no waveform files` | 目录/扩展名不匹配 | 检查 `--from-local` 路径；支持 mseed/sac |
 
 ## Phase 2 预处理
