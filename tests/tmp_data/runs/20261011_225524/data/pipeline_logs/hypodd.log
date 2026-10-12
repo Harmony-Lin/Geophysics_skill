@@ -1,0 +1,52 @@
+
+
+(ph2dt) starting ph2dt 11/10/2026 23:05:27
+No event.select file.
+reading phase file...
+> events total = 14
+> events selected = 14
+> phases = 544
+> P phases = 408
+> S phases = 136
+(ph2dt) Forming dtimes ...
+
+
+Building event-pair catalog.
+Stations used:  0
+> P-phase pairs total =  102
+> S-phase pairs total =  40
+> outliers =  127  ( 89.43661971830986 %)
+> phases at stations not in station list =  0
+> phases at distances larger than MAXDIST =  15
+> P-phase pairs selected =  0 ( 0.0 %)
+> S-phase pairs selected =  0 ( 0.0 %)
+> weakly linked events =  14 ( 100.0 %)
+> linked event pairs =  0
+> average links per pair =  0
+> average offset (km) betw. linked events =  0.0
+> average offset (km) betw. strongly linked events =  0.0
+> maximum offset (km) betw. strongly linked events =  0.0
+Output files: dt.ct; event.dat; event.sel; ph2dt.log
+ph2dt parameters were: 
+(maxdist,maxsep,maxngh,minlnk,minobs,maxobs)
+200.0 10.0 10 8 8 30
+ph2dt done 11/10/2026 23:05:27
+(ph2dt) Done with ph2dt. 
+
+
+
+{
+  "status": "warning",
+  "backend": "relocdd-py",
+  "n_events_input": 14,
+  "n_relocated": 0,
+  "warning": "ph2dt found no event pairs with physically consistent differential times, so no relative relocation was attempted",
+  "hint": "see ph2dt.log ('outliers', 'linked event pairs'); double-difference relocation needs events clustered in both space and origin time, and lowering MINLNK/raising MAXSEPE cannot create pairs that the travel-time test rejects",
+  "run_dir": "data\\locate\\hypodd"
+}
+
+---STDERR---
+[INFO] Step 1/4: preparing phase.dat / station.dat / control files...
+[INFO] phase.dat: 544 phase rows written, 51 picks dropped (duplicate station/phase or station absent from station.dat)
+[INFO] Step 2/4: running relocDD-py ph2dt...
+[WARN] ph2dt linked no event pairs; skipping the hypoDD inversion

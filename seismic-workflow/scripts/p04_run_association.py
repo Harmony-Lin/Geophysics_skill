@@ -52,6 +52,22 @@ def main() -> None:
                       [[-200, 200], [-200, 200], [0, 40], [-20, 20]])
     log(f"Loaded GaMMA config from {cfg_path}")
 
+    # --- dynamic time bounds for BFGS relocation ---
+    # GaMMA converts all pick timestamps to seconds relative to the earliest
+    # pick (timestamp0). Events that occur minutes/hours later have a relative
+    # time far beyond the fixed t_bounds like [-20, 20] s, which pins the
+    # origin-time during L-BFGS-B and makes every theoretical arrival miss the
+    # observed picks (so all picks get filtered => 0 events).
+    # Set t_bounds from the actual data span so late events relocate correctly.
+    pick_times = pd.to_datetime(picks["time"], utc=True)
+    _t_spans = (pick_times.max() - pick_times.min()).total_seconds()
+    _t_margin = max(1.0, _t_spans * 0.1)
+    _t_bounds = [-_t_margin, _t_spans + _t_margin]
+    _st = config.get("bfgs_bounds", [[-200, 200], [-200, 200], [0, 40], [-20, 20]])
+    _st[3] = _t_bounds
+    config["bfgs_bounds"] = _st
+    log(f"Set bfgs time bounds to {_t_bounds} (data span {_t_spans:.0f}s)")
+
     # --- station geometry in local km coordinates (config["dims"]) ---
     proj = Proj(f"+proj=aeqd +lon_0={stations.longitude.mean()} "
                 f"+lat_0={stations.latitude.mean()} +units=km")
@@ -85,6 +101,10 @@ def main() -> None:
         "prob": picks["probability"].astype(float),
         "amp": 1.0,  # unused when config["use_amplitude"]=false
     })
+    # Remember the source CSV row numbers: GaMMA reports associations by
+    # position in the frame we hand it, and downstream phases need the original
+    # row to pick out each event's own arrivals.
+    pick_rows = gamma_picks.index.to_numpy()
     gamma_picks = gamma_picks.reset_index(drop=True)
 
     log(f"Associating {len(gamma_picks)} picks across {len(stations)} stations...")
@@ -122,11 +142,32 @@ def main() -> None:
     ensure_dir(out.parent)
     pd.DataFrame(rows).to_csv(out, index=False)
 
+    # --- persist the pick -> event association ------------------------------
+    # GaMMA returns (pick_index, event_index, prob) tuples, where pick_index
+    # positions into the frame passed above.  Exporting it lets Phase 5 select
+    # each event's own picks instead of falling back to a time window, which
+    # re-uses the same pick for several events and drags in unrelated arrivals.
+    # The prob member is intentionally not written: upstream zips a full-length
+    # probability array against the shorter filtered pick list, so those values
+    # can be misaligned.
+    assign_rows = [
+        {"pick_index": int(pick_rows[int(a[0])]),
+         "event_id": f"ev{int(a[1]):06d}"}
+        for a in assignments
+        if 0 <= int(a[0]) < len(pick_rows)
+    ]
+    assign_out = out.parent / "assignments.csv"
+    pd.DataFrame(assign_rows, columns=["pick_index", "event_id"]).to_csv(
+        assign_out, index=False)
+    log(f"Wrote {len(assign_rows)} pick assignments to {assign_out}")
+
     emit({
         "status": "ok",
         "n_picks_input": int(len(picks)),
         "n_events": len(rows),
+        "n_assignments": len(assign_rows),
         "events_file": str(out),
+        "assignments_file": str(assign_out),
         "config_used": str(cfg_path),
     })
 

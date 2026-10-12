@@ -1,8 +1,8 @@
 """Minimal end-to-end verification of the seismic-workflow skill.
 
 Follows SKILL.md checkpoints 0-8 on the default test dataset: REAL waveforms
-of the 2024 Salcha (Alaska) M5.3 earthquake sequence downloaded from an FDSN
-data center (EarthScope/IRIS) via tests/fetch_salcha.py.
+of the 2025 Templeton (California) M4.1 earthquake sequence downloaded from
+FDSN data centres (EarthScope/NCEDC/SCEDC) via tests/fetch_templeton.py.
 
   0. detect_env.py        -> obspy & seisbench available
   1. raw waveforms staged -> n_files > 0 (real FDSN data; fetched if absent)
@@ -22,6 +22,7 @@ Exit code 0 = all checkpoints pass; prints a JSON summary.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -50,6 +51,183 @@ def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
                           text=True, encoding="utf-8", errors="replace", **kw)
 
 
+def _has_module(name: str) -> bool:
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def parse_last_json(text: str) -> dict:
+    """Extract the last complete JSON object from mixed stdout.
+
+    Some libraries (e.g. GaMMA) print progress lines to stdout, polluting
+    the JSON contract; find the OUTERMOST/LONGEST {...} block that parses.
+    """
+    if not text or not text.strip():
+        return {}
+    decoder = json.JSONDecoder()
+    candidates = []
+    for idx in range(len(text)):
+        if text[idx] != "{":
+            continue
+        try:
+            obj, end = decoder.raw_decode(text[idx:])
+            candidates.append((idx, end, obj))
+        except json.JSONDecodeError:
+            continue
+    if not candidates:
+        return {}
+    return max(candidates, key=lambda x: x[1])[2]
+
+
+def run_step(name: str, cmd: list[str], cwd: Path) -> dict:
+    """Run one pipeline phase with real-time logs; returns parsed JSON.
+
+    Streams stdout/stderr to the terminal as it arrives (real-time logs)
+    while also capturing them for the per-phase log file and JSON summary.
+    """
+    import threading
+    print(f"\n=== Phase {name}: {' '.join(str(c) for c in cmd)}")
+    proc = subprocess.Popen(
+        [str(c) for c in cmd], cwd=str(cwd),
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        encoding="utf-8", errors="replace", bufsize=1)
+
+    def pump(stream, sink):
+        for line in iter(stream.readline, ""):
+            sink.append(line)
+            print(line, end="", flush=True)
+        stream.close()
+
+    out_lines, err_lines = [], []
+    t_out = threading.Thread(target=pump, args=(proc.stdout, out_lines))
+    t_err = threading.Thread(target=pump, args=(proc.stderr, err_lines))
+    t_out.start()
+    t_err.start()
+    proc.wait()
+    t_out.join()
+    t_err.join()
+
+    stdout = "".join(out_lines)
+    stderr = "".join(err_lines)
+
+    # write per-phase log file (same layout as p99_run_pipeline.py)
+    log_dir = cwd / "data" / "pipeline_logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    (log_dir / f"{name}.log").write_text(
+        stdout + "\n---STDERR---\n" + stderr, encoding="utf-8")
+
+    result = parse_last_json(stdout)
+    if not result:
+        result = {"status": "error", "error": "non-JSON stdout",
+                  "stdout_tail": stdout[-1000:]}
+    if proc.returncode != 0 or result.get("status") not in ("ok", "warning"):
+        result.setdefault("status", "error")
+        result["phase"] = name
+        result["failed_phase"] = name
+    return result
+
+
+def run_pipeline(py: str, cwd: Path) -> dict:
+    """Run P2-P8 step-by-step with real-time logs; returns summary dict.
+
+    Mirrors the phase ordering and CLI args of p99_run_pipeline.py so the
+    produced summary (status / completed_phases / results) is identical.
+    """
+    w = "data"
+    results = {}
+    completed = []
+
+    # Phase 2 — remove instrument response so later phases see physical units
+    stations_xml = f"{w}/stations/stations.xml"
+    results["preprocess"] = run_step("preprocess", [
+        py, SCRIPTS / "p02_preprocess.py",
+        "--input", "data/raw", "--output", f"{w}/preprocessed",
+        "--stations", stations_xml, "--remove-response",
+        "--filter", "0.5-20", "--resample", "100"], cwd)
+    completed.append("preprocess")
+
+    # Phase 3
+    results["pick"] = run_step("pick", [
+        py, SCRIPTS / "p03_pick_phases.py",
+        "--input", f"{w}/preprocessed",
+        "--output", f"{w}/picks/phasenet_picks.csv"], cwd)
+    completed.append("pick")
+
+    # Phase 4
+    stations_csv = f"{w}/stations/stations.csv"
+    results["associate"] = run_step("associate", [
+        py, SCRIPTS / "p04_run_association.py",
+        "--picks", f"{w}/picks/phasenet_picks.csv",
+        "--stations", stations_csv,
+        "--output", f"{w}/assoc/events.csv"], cwd)
+    completed.append("associate")
+
+    # Phase 5 — pluggable backend
+    import shutil
+    if shutil.which("NLLoc"):
+        results["locate"] = run_step("locate", [
+            SCRIPTS / "p05_run_nll_locate.sh",
+            "--events", f"{w}/assoc/events.csv",
+            "--picks", f"{w}/picks/phasenet_picks.csv",
+            "--stations", stations_csv,
+            "--output-dir", f"{w}/locate/nll"], cwd)
+        final_catalog = f"{w}/locate/nll/catalog_abs.csv"
+    else:
+        results["locate"] = run_step("locate", [
+            py, SCRIPTS / "p05_grid_locate.py",
+            "--events", f"{w}/assoc/events.csv",
+            "--picks", f"{w}/picks/phasenet_picks.csv",
+            "--stations", stations_csv,
+            "--output", f"{w}/locate/catalog_abs.csv"], cwd)
+        final_catalog = f"{w}/locate/catalog_abs.csv"
+    completed.append("locate")
+
+    # Phase 6 — optional (relocDD-py, installed from git at install time)
+    relocdd_ok = _has_module("ph2dt") and _has_module("hypoDD")
+    if relocdd_ok:
+        results["hypodd"] = run_step("hypodd", [
+            py, SCRIPTS / "p06_run_hypodd.py",
+            "--catalog", final_catalog,
+            "--waveforms", f"{w}/preprocessed",
+            "--picks", f"{w}/picks/phasenet_picks.csv",
+            "--stations", stations_csv,
+            "--output-dir", f"{w}/locate/hypodd"], cwd)
+        completed.append("hypodd")
+        dd_catalog = cwd / w / "locate" / "hypodd" / "catalog_dd.csv"
+        if dd_catalog.exists():
+            final_catalog = str(dd_catalog)
+
+    # Phase 7
+    results["magnitude"] = run_step("magnitude", [
+        py, SCRIPTS / "p07_compute_magnitude.py",
+        "--catalog", final_catalog,
+        "--waveforms", f"{w}/preprocessed",
+        "--stations", f"{w}/stations/stations.xml",
+        "--output", f"{w}/locate/catalog_final.csv"], cwd)
+    completed.append("magnitude")
+
+    # Phase 8
+    results["qc"] = run_step("qc", [
+        py, SCRIPTS / "p08_qc_and_plot.py",
+        "--catalog", f"{w}/locate/catalog_final.csv",
+        "--picks", f"{w}/picks/phasenet_picks.csv",
+        "--waveforms", f"{w}/preprocessed",
+        "--stations", stations_csv,
+        "--output-dir", f"{w}/qc"], cwd)
+    completed.append("qc")
+
+    return {
+        "status": "ok",
+        "completed_phases": completed,
+        "final_catalog": f"{w}/locate/catalog_final.csv",
+        "report": f"{w}/qc/report.md",
+        "results": {k: {kk: vv for kk, vv in v.items() if kk != "status"}
+                    for k, v in results.items()},
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--keep", action="store_true",
@@ -59,9 +237,9 @@ def main() -> int:
     # --- ensure the default dataset exists -----------------------------
     raw_files = sorted((TMP / "raw").glob("*.mseed"))
     if not raw_files:
-        print("Default dataset missing — downloading real Salcha "
+        print("Default dataset missing — downloading real Templeton M4.1 "
               "waveforms from FDSN...")
-        proc = run([sys.executable, ROOT / "tests" / "fetch_salcha.py"])
+        proc = run([sys.executable, ROOT / "tests" / "fetch_templeton.py"])
         if proc.returncode != 0:
             check("P1 FDSN fetch", False,
                   f"download failed:\n{proc.stderr[-600:]}")
@@ -97,22 +275,8 @@ def main() -> int:
     check("P0 obspy+seisbench", bool(pkgs.get("obspy")) and bool(pkgs.get("seisbench")),
           f"backends={env.get('backends')}")
 
-    # --- Phases 2-8: one-shot pipeline --------------------------------
-    proc = run([py, SCRIPTS / "p99_run_pipeline.py",
-                "--input", "data/raw", "--workdir", "data",
-                "--skip", "hypodd"], cwd=WS)
-    summary = {}
-    try:
-        summary = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        log = WS / "data" / "pipeline_logs"
-        tail = ""
-        if log.exists():
-            fails = sorted(log.glob("*.log"))
-            if fails:
-                tail = fails[-1].read_text(encoding="utf-8", errors="replace")[-800:]
-        check("pipeline completed", False, f"non-JSON stdout; last log tail:\n{tail}")
-        return finish(args.keep)
+    # --- Phases 2-8: run step-by-step with real-time logs -------------
+    summary = run_pipeline(py, WS)
 
     check("pipeline status ok", summary.get("status") == "ok",
           f"completed={summary.get('completed_phases')}")

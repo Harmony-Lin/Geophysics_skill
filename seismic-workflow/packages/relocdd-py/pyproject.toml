@@ -1,0 +1,42 @@
+# Packaging metadata for the upstream relocDD-py source tree.
+#
+# Upstream (https://github.com/katie-biegel/relocDD-py) ships neither
+# `setup.py` nor `pyproject.toml`, so `pip install git+https://...` fails with
+# "does not appear to be a Python project".  install.py drops this file into a
+# git checkout of the pinned revision and runs `pip install -e` on it.
+#
+# Keep the package list in sync with the top-level directories of upstream.
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "relocdd-py"
+# upstream publishes no releases; a version is only needed for installation
+version = "0.0.0"
+description = "Double-Difference Relocation Software in Python (HypoDD port)"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "matplotlib>=3.6",
+    "obspy>=1.4",
+    "utm",
+]
+
+[tool.setuptools]
+# hypoDD/ph2dt import each other by absolute top-level name
+# (e.g. `from methodTypes.eventPair.hypoDD_ev import ...`), so every directory
+# has to be installed as a top-level package.
+packages = [
+    "hypoDD",
+    "methodTypes",
+    "methodTypes.doublePair",
+    "methodTypes.eventPair",
+    "methodTypes.stationPair",
+    "ph2dt",
+    "runOptions",
+    "utility",
+    "utility.synthetics",
+    "utility.universal",
+]

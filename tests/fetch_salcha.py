@@ -1,7 +1,12 @@
-"""Fetch the default test dataset: real waveforms of the 2024 Salcha
+"""Fetch an alternative test dataset: real waveforms of the 2024 Salcha
 (Alaska) M5.3 earthquake sequence from an FDSN data center.
 
-Default scenario (real USGS/AK catalog parameters):
+The Salcha sequence was the default test dataset before 2025; the default is
+now the 2025 M4.1 Templeton (California) sequence, see
+tests/fetch_templeton.py.  This script is kept for the larger-regional-network
+scenario and writes the same outputs, so it can be run instead.
+
+Scenario (real USGS/AK catalog parameters):
 
   Mainshock : 2024-01-19 21:34:35 UTC, Mw 5.3, 64.4909N -146.9641E, 10.5 km
               (USGS event ak024vrx24o)
@@ -29,8 +34,8 @@ OUT = Path(__file__).parent / "tmp_data"
 RAW = OUT / "raw"
 
 # ---------------------------------------------------------------------------
-# Default dataset parameters — 2024 Salcha, Alaska M5.3 sequence
-# (recorded here so tests are reproducible; see docs/verification.md)
+# Scenario parameters — 2024 Salcha, Alaska M5.3 sequence
+# (recorded here so the run is reproducible)
 # ---------------------------------------------------------------------------
 # (event_id, origin UTC ISO, lat, lon, depth_km, magnitude)
 EVENTS = [

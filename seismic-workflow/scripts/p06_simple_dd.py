@@ -184,7 +184,7 @@ def main() -> None:
         "rms_reduction": round(rms_before - rms_after, 4),
         "catalog_file": str(out),
         "note": "simplified DD: differential-time station corrections only; "
-                "full HypoDD needed for sub-km precision",
+                "full relocDD-py needed for sub-km precision",
     })
 
 

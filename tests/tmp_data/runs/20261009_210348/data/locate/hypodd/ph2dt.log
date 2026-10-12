@@ -1,0 +1,11 @@
+Ph2dt input file vairables: 
+Data file locations: statfile=station.dat, phasefile=phase.dat 
+Pairing variables: minwght=0.000000, maxdist=200.000000, maxoffsete=10.000000, maxoffsets=2.000000, 
+mnb=10, limobs_pair=8, minobs_pair=8, maxobs_pair=30 
+Returning ph2dt input variables.
+
+
+
+(ph2dt) starting ph2dt 09/10/2026 21:33:46 
+> stations = 5 
+No events.select file. 

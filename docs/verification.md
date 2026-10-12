@@ -7,7 +7,7 @@
 
 ## 1. 验证内容概览
 
-验证脚本在**真实波形数据**（2024 Salcha M5.3 地震序列，来自 FDSN 数据中心）上串接执行 skill 的全部阶段，并对每个检查点做断言：
+验证脚本在**真实波形数据**（2025 Templeton M4.1 地震序列，来自 FDSN 数据中心）上串接执行 skill 的全部阶段，并对每个检查点做断言：
 
 | 检查点 | 阶段 | 断言内容 |
 |--------|------|----------|
@@ -17,7 +17,7 @@
 | CP3 | 拾取 (P3) | picks CSV 行数与 JSON `n_picks` 一致 |
 | CP4 | 关联 (P4) | events CSV 存在且事件数 ≥ 1 |
 | CP5 | 定位 (P5) | 定位成功数 ≥ 关联事件数的 50% |
-| CP7 | 震级 (P7) | 最终目录含 lat/lon/depth 列 |
+| CP7 | 震级 (P7) | 最终目录含 lat/lon/depth 列；ML 由 Wood-Anderson 仿真 (Bakun & Joyner 1984) 计算且 `magnitude_type=="ML"` |
 | CP8 | 质检 (P8) | `report.md` + ≥5 张 PNG 图件（含拾取样例图） |
 
 P6（HypoDD 相对定位）默认跳过（`--skip hypodd`），因二进制缺失时自动回退。
@@ -43,21 +43,43 @@ P6（HypoDD 相对定位）默认跳过（`--skip hypodd`），因二进制缺�
 > 连带从源码编译 scipy，最终因 Windows 缺 Fortran 编译器而失败。
 > pip 报的 "gmma requires scikit-learn==1.7" 版本冲突警告可忽略。
 
-### 2.2 测试数据（默认数据集：2024 Salcha M5.3 地震序列）
+### 2.2 测试数据（默认数据集：2025 Templeton M4.1 地震序列）
 
 验证依赖 `tests/tmp_data/` 下的真实波形数据，场景取自真实事件：
-**2024 年 1 月 19 日阿拉斯加 Salcha Mw 5.3 地震**（USGS 事件号 `ak024vrx24o`）。
-数据由 `tests/fetch_salcha.py` 从 FDSN 数据中心（EarthScope/IRIS）下载。
+**2025 年 11 月 18 日加州 Templeton M4.1 地震**（NCEDC 事件号 `nc75265261`，
+`35.5528°N / 120.7878°W`，深度 4.9 km）。数据由 `tests/fetch_templeton.py`
+从 FDSN 数据中心（EarthScope / NCEDC / SCEDC）下载。
 
-若数据不存在，脚本会自动下载：
+该脚本直接从仓库中的两个清单取输入：
+
+- `tests/channels.csv` — 本序列可用通道（`NET STA CHN LOC`，157 个台站；
+  只列出水平分量，脚本会自动补上对应的 Z 分量，如 `HHE` → `HHZ`）
+- `tests/aftershock_sequence.csv` — 完整余震序列（156 条目录）。
+  由于序列很长，默认只下载**震级最大的前 N 个余震**（外加主震），
+  N 由 `--n-aftershocks` 控制，默认为 10。
+
+没有哪个数据中心单独覆盖全部通道，脚本按台网分别路由到实际持有数据的
+数据中心并带重试；某个数据中心不可用时会被跳过而不是让整次下载失败。
+
+若数据不存在，验证脚本会自动调用下载：
 
 ```powershell
-& .venv\Scripts\python.exe tests/fetch_salcha.py
+# 默认：主震 + 10 个最大余震
+& .venv\Scripts\python.exe tests/fetch_templeton.py
+
+# 只要主震（快速冒烟测试），或换一个 N
+& .venv\Scripts\python.exe tests/fetch_templeton.py --n-aftershocks 0
+& .venv\Scripts\python.exe tests/fetch_templeton.py --n-aftershocks 25
 ```
 
 产出：
-- `tests/tmp_data/raw/event_*.mseed` — 各事件 × 台站波形
+- `tests/tmp_data/raw/event_*.mseed` — 各事件 × 台站波形（`event_00` 为主震）
 - `tests/tmp_data/stations.xml` 与 `tests/tmp_data/stations/stations.csv`
+- `tests/tmp_data/templeton_catalog.csv` — 已下载事件的目录
+
+`stations.csv` 每个 `(台网, 台站, 位置码)` 一行，`station` 列为
+`NET.STA.LOC`（如 `BK.PKD.00`）。P4 关联要求台站 id 与拾取 id 完全一致，
+若写成不带位置码的 `NET.STA.`，带 `00`/`10` 等位置码的台站会被丢弃。
 
 PhaseNet 权重首次运行会自动下载到 `~/.cache/seisbench/`；离线环境请从有网机器拷贝。
 
@@ -112,7 +134,7 @@ verify_ws/
     │   └── catalog_final.csv    # P7 加震级后的最终目录
     ├── qc/                      # P8 质检产物
     │   ├── report.md            # 处理报告
-    │   ├── epicenter_map.png    # 震中分布图
+    │   ├── epicenter_map.png    # 震中分布图（Cartopy 海陆+行政边界底图）
     │   ├── gr_relation.png      # G-R 关系
     │   ├── depth_histogram.png  # 深度直方图
     │   └── residuals.png        # 走时残差
@@ -127,7 +149,32 @@ verify_ws/
 `pipeline_logs/<阶段>.log`（JSON 为 stdout 结果，`---STDERR---` 之后是
 人类可读日志/堆栈）→ 需要时再检查对应目录的中间 CSV。
 
-## 5. 当前已知状态与限制
+## 5. ML 震级回归测试（`tests/verify_ml.py`）
+
+`verify_skill.py` 只断言 P7 "产出目录含震级列"，不断言震级**数值是否正确**。
+`tests/verify_ml.py` 补齐这一点：在真实 Templeton 数据上跑 P2 → P7，
+把算出的 ML 与 FDSN 公开的 `ml` 震级对比（默认锚定 `event_02`，公开值 ML 3.19）。
+
+```powershell
+& .venv\Scripts\python.exe tests/verify_ml.py
+& .venv\Scripts\python.exe tests/verify_ml.py --event 0 --tolerance 0.5 --keep
+```
+
+12 条检查点：
+
+| 检查点 | 断言内容 |
+|--------|----------|
+| CP1 | 缺 StationXML 时 P2 快速失败（`status=error`，退出码 1） |
+| CP2 | P2 成功；每条 trace 都做了去响应（`output_units=="M/S"`）；输出文件已写出 |
+| CP3 | P7 的 WA Poles/Zeros/Gain/Sensitivity 与 ObsPy `WOODANDERSON` 完全一致 |
+| CP4 | WA 仿真缩放因子与 ObsPy 解析式一致（1% 容差） |
+| CP5 | P7 成功；`ml_relation` 指向 Bakun & Joyner；ML 与公开值之差 ≤ `--tolerance`（默认 0.5） |
+| CP6 | `magnitude_type=="ML"`，且计算结果覆盖上游目录里的 `magnitude` 列 |
+
+**任何对 P7 常数、单位约定、振幅定义或 P2 去响应的改动，都必须先跑通本脚本。**
+运行产物归档到 `tests/tmp_data/runs/<时间戳>_ml/`（加 `--keep` 保留）。
+
+## 6. 当前已知状态与限制
 
 截至本文件编写时（2026-08-26）：**全部检查点通过（9/9）**
 
@@ -156,7 +203,7 @@ P4 适配要点（GMMA 1.2.17 相对旧版的破坏性变更）：
 GaMMA 的多事件区分能力在此稀疏数据上有限，可能只关联出部分事件——
 这不影响"流程贯通"的验证目标，但事件数可能少于下载的事件总数。
 
-## 6. 常见问题
+## 7. 常见问题
 
 | 现象 | 原因与处理 |
 |------|-----------|
@@ -165,3 +212,4 @@ GaMMA 的多事件区分能力在此稀疏数据上有限，可能只关联出�
 | `n_events == 0` | 拾取数少于 `min_picks_per_eq`；编辑 `assets/gamma_config.json` 降低该值后重试 |
 | PhaseNet 权重下载失败 | 离线环境，从有网机器拷贝 `~/.cache/seisbench/` |
 | `scipy/gfortran` 编译错误 | 直接跑了官方安装命令，见 §2.1 正确安装方式 |
+| ML 比公开值低 2 级以上 | `--assume-units` 与上游输出单位不一致，见 §5 与 `references/troubleshooting.md` |

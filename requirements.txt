@@ -5,6 +5,9 @@
 obspy>=1.4.1            # 数据获取/预处理/震级计算
 seisbench>=0.8          # 深度学习震相拾取 (PhaseNet 等)
 gmma @ git+https://github.com/AI4EPS/gamma.git  # 震相关联（如安装失败可注释，见 docs/install.md）
+# relocDD-py 双差定位：上游无 setup.py/pyproject.toml，无法用 git+ 直装
+#   安装：python seismic-workflow/packages/relocdd-py/install.py（git clone + pip install -e）
+#   详见 docs/install.md
 
 # --- 深度学习后端 ---
 torch>=2.2              # SeisBench 依赖；GPU 版请按官方指引单独安装

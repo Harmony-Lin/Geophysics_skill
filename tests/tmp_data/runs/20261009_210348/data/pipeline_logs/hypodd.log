@@ -1,0 +1,14 @@
+
+
+(ph2dt) starting ph2dt 09/10/2026 21:33:46
+No event.select file.
+reading phase file...
+{
+  "status": "error",
+  "error": "relocDD-py ph2dt failed: index 10 is out of bounds for axis 1 with size 10",
+  "hint": "see ph2dt.log; check phase.dat/station.dat consistency"
+}
+
+---STDERR---
+[INFO] Step 1/4: preparing phase.dat / station.dat / control files...
+[INFO] Step 2/4: running relocDD-py ph2dt...

@@ -38,17 +38,134 @@ def _annotate_events(ax, catalog, max_labels=30):
                         fontsize=6, color="darkred")
 
 
-def plot_epicenter_map(catalog, stations, out_png: Path) -> str:
-    """Try PyGMT first; fall back to Cartopy/Matplotlib. Returns backend name."""
+def _ne_scale(extent) -> str:
+    """Cheapest Natural Earth resolution that still looks right."""
+    span = max(extent[1] - extent[0], extent[3] - extent[2])
+    return "10m" if span <= 2 else ("50m" if span <= 20 else "110m")
+
+
+def _add_cartopy_basemap(ax, extent, admin1: bool = True) -> list:
+    """Cartopy 底图：海陆（海洋/陆地/海岸线）+ 行政边界（国界/省界）。
+
+    Each layer is added on its own so that missing Natural Earth data (or a
+    shapely/GEOS quirk) only drops that layer instead of the whole basemap.
+    """
+    import cartopy.feature as cfeature
+    scale = _ne_scale(extent)
+    layers = [
+        ("ocean", cfeature.OCEAN, dict(facecolor="#e8f1fa", zorder=0)),
+        ("land", cfeature.LAND, dict(facecolor="#f4f1e8", zorder=1)),
+        ("coastline", cfeature.COASTLINE,
+         dict(edgecolor="#1a1a1a", linewidth=0.6, zorder=2)),
+        ("country_borders", cfeature.BORDERS,
+         dict(edgecolor="#b15928", linewidth=0.7, zorder=2)),
+    ]
+    if admin1:
+        layers.append(("province_borders", cfeature.STATES,
+                       dict(edgecolor="#888888", linewidth=0.4,
+                            linestyle="--", zorder=2)))
+    drawn = []
+    for name, feature, style in layers:
+        try:
+            ax.add_feature(feature.with_scale(scale), **style)
+        except Exception as exc:  # missing or broken Natural Earth data
+            warn(f"basemap layer {name} skipped ({exc})")
+            continue
+        drawn.append(name)
+    return drawn
+
+
+def _geo_figure_layout(extent):
+    """Figure size + axes rectangle matched to the map aspect.
+
+    Cartopy keeps an equal aspect, so a fixed ``figsize`` plus automatic
+    layout (``tight_layout``) leaves big blank margins and — with labeled
+    gridlines — trips a gridliner/GEOS bug that aborts the whole render.
+    Sizing the figure from the extent avoids both.
+    """
+    span_x = max(extent[1] - extent[0], 1e-9)
+    span_y = max(extent[3] - extent[2], 1e-9)
+    width = 9.0
+    height = float(np.clip(width * span_y / span_x + 0.8, 5.0, 12.0))
+    return (width, height), [0.07, 0.08, 0.77, 0.86]
+
+
+def _draw_epicenter_figure(catalog, stations, mags, extent, *, cartopy=True,
+                           admin1=True, gridline_labels=True):
+    """Draw the epicenter figure once. Returns (fig, backend, layers)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    layers = []
+    cax = None
+    if cartopy:
+        import cartopy.crs as ccrs
+        crs = ccrs.PlateCarree()
+        figsize, rect = _geo_figure_layout(extent)
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_axes(rect, projection=crs)
+        ax.set_extent(list(extent), crs=crs)
+        layers = _add_cartopy_basemap(ax, extent, admin1=admin1)
+        gl = ax.gridlines(draw_labels=gridline_labels, linestyle=":",
+                          linewidth=0.4, color="gray")
+        if gridline_labels:
+            gl.top_labels = gl.right_labels = False
+        cax = fig.add_axes([0.88, 0.25, 0.022, 0.5])
+        backend = "cartopy"
+    else:
+        fig, ax = plt.subplots(figsize=(8, 7))
+        backend = "matplotlib"
+
+    sc = ax.scatter(catalog["longitude"], catalog["latitude"], c=mags,
+                    cmap="YlOrRd", edgecolors="black", linewidths=0.3,
+                    s=12 + 8 * mags, label="earthquake", zorder=3)
+    ax.scatter(stations["longitude"], stations["latitude"], marker="^",
+               c="blue", s=50, edgecolors="black", linewidths=0.4,
+               label="station", zorder=4)
+    for row in stations.itertuples():
+        code = getattr(row, "station_code", str(row.station))
+        ax.annotate(code, (row.longitude, row.latitude),
+                    textcoords="offset points", xytext=(0, 7),
+                    ha="center", fontsize=7, color="blue", zorder=5)
+    _annotate_events(ax, catalog)
+    try:
+        if cax is not None:
+            fig.colorbar(sc, cax=cax, label="Magnitude")
+        else:
+            fig.colorbar(sc, ax=ax, shrink=0.7, label="Magnitude")
+    except Exception:
+        pass
+    ax.set_xlabel("Longitude")
+    ax.set_ylabel("Latitude")
+    ax.set_title("Epicenter distribution")
+    ax.legend(loc="upper left")
+    if not cartopy:  # Cartopy 底图已按 extent 定尺寸，自动布局会触发网格标注缺陷
+        fig.tight_layout()
+    return fig, backend, layers
+
+
+def plot_epicenter_map(catalog, stations, out_png: Path):
+    """Plot the epicenter map. Returns (backend name, basemap layers drawn).
+
+    Backend order: PyGMT (出版级，自带海岸线/国界) → Cartopy（增绘海陆与
+    行政边界底图）→ 纯 Matplotlib。Cartopy 底图按"图层最全者先试"逐级降级，
+    因此网格标注或省界数据出问题时只丢弃该层，底图其余部分仍保留。
+    """
+    lon_min = float(min(catalog["longitude"].min(),
+                        stations["longitude"].min())) - 0.3
+    lon_max = float(max(catalog["longitude"].max(),
+                        stations["longitude"].max())) + 0.3
+    lat_min = float(min(catalog["latitude"].min(),
+                        stations["latitude"].min())) - 0.3
+    lat_max = float(max(catalog["latitude"].max(),
+                        stations["latitude"].max())) + 0.3
+    extent = (lon_min, lon_max, lat_min, lat_max)
+
     try:
         import pygmt
-        region = [
-            min(catalog["longitude"].min(), stations["longitude"].min()) - 0.3,
-            max(catalog["longitude"].max(), stations["longitude"].max()) + 0.3,
-            min(catalog["latitude"].min(), stations["latitude"].min()) - 0.3,
-            max(catalog["latitude"].max(), stations["latitude"].max()) + 0.3]
         fig = pygmt.Figure()
-        fig.basemap(region=region, projection="M12c",
+        fig.basemap(region=list(extent), projection="M12c",
                     frame=["af", 'WSne+t"Epicenter distribution"'])
         fig.coast(land="lightgray", water="white", borders=1, roads="gray")
         fig.plot(x=catalog["longitude"], y=catalog["latitude"],
@@ -63,109 +180,50 @@ def plot_epicenter_map(catalog, stations, out_png: Path) -> str:
         _pygmt_event_text(fig, catalog)
         fig.legend(position="JTR+jTR+o0.2c")
         fig.savefig(str(out_png), dpi=200)
-        return "pygmt"
+        return "pygmt", ["land", "ocean", "country_borders"]
     except Exception as exc:
         warn(f"PyGMT unavailable ({exc}); falling back to Matplotlib/Cartopy")
+
+    try:
+        import cartopy.feature  # noqa: F401
+        have_cartopy = True
+    except Exception as exc:
+        warn(f"Cartopy unavailable ({exc}); plain Matplotlib map")
+        have_cartopy = False
 
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import pandas as pd
 
-    def _plain_map():
-        fig, ax = plt.subplots(figsize=(8, 7))
-        return fig, ax, "matplotlib"
+    mags = pd.to_numeric(catalog.get("magnitude"), errors="coerce").fillna(0.0)
 
-    try:
-        import cartopy.crs as ccrs
-        import cartopy.feature as cfeature
-        lon_min = float(min(catalog["longitude"].min(),
-                            stations["longitude"].min())) - 0.3
-        lon_max = float(max(catalog["longitude"].max(),
-                            stations["longitude"].max())) + 0.3
-        lat_min = float(min(catalog["latitude"].min(),
-                            stations["latitude"].min())) - 0.3
-        lat_max = float(max(catalog["latitude"].max(),
-                            stations["latitude"].max())) + 0.3
-        proj = ccrs.PlateCarree()
-        fig, ax = plt.subplots(figsize=(9, 8),
-                               subplot_kw={"projection": proj})
-        ax.set_extent([lon_min, lon_max, lat_min, lat_max], crs=proj)
-        ax.add_feature(cfeature.LAND, facecolor="lightgray")
-        ax.add_feature(cfeature.OCEAN, facecolor="white")
-        ax.add_feature(cfeature.COASTLINE, linewidth=0.5)
-        ax.add_feature(cfeature.BORDERS, linewidth=0.5)
-        ax.add_feature(cfeature.STATES, linewidth=0.4, edgecolor="gray")
-        gl = ax.gridlines(draw_labels=True, linestyle=":",
-                          linewidth=0.4, color="gray")
-        gl.top_labels = gl.right_labels = False
-        backend = "cartopy"
-    except Exception as exc:
-        warn(f"Cartopy unavailable ({exc}); plain Matplotlib map")
-        fig, ax, backend = _plain_map()
+    attempts = []
+    if have_cartopy:
+        attempts += [
+            dict(cartopy=True, admin1=True, gridline_labels=True),
+            dict(cartopy=True, admin1=True, gridline_labels=False),
+            dict(cartopy=True, admin1=False, gridline_labels=False),
+        ]
+    attempts.append(dict(cartopy=False, admin1=False, gridline_labels=False))
 
-    sc = ax.scatter(catalog["longitude"], catalog["latitude"],
-                    c=pd.to_numeric(catalog.get("magnitude"),
-                                    errors="coerce").fillna(0.0),
-                    cmap="YlOrRd", edgecolors="black", linewidths=0.3,
-                    s=12 + 8 * pd.to_numeric(
-                        catalog.get("magnitude"), errors="coerce").fillna(0.0),
-                    label="earthquake", zorder=3)
-    ax.scatter(stations["longitude"], stations["latitude"], marker="^",
-               c="blue", s=50, edgecolors="black", linewidths=0.4,
-               label="station", zorder=4)
-    for row in stations.itertuples():
-        code = getattr(row, "station_code", str(row.station))
-        ax.annotate(code, (row.longitude, row.latitude),
-                    textcoords="offset points", xytext=(0, 7),
-                    ha="center", fontsize=7, color="blue", zorder=5)
-    _annotate_events(ax, catalog)
-    try:
-        fig.colorbar(sc, ax=ax, shrink=0.7, label="Magnitude")
-    except Exception:
-        pass
-    ax.set_xlabel("Longitude")
-    ax.set_ylabel("Latitude")
-    ax.set_title("Epicenter distribution")
-    ax.legend(loc="upper left")
-    fig.tight_layout()
-    try:
-        fig.savefig(out_png, dpi=200)
-    except Exception as exc:
-        # Cartopy can fail at draw time (e.g. shapely gridliner issues);
-        # retry once with a plain Matplotlib axes.
-        warn(f"Cartopy render failed ({exc}); retrying with plain Matplotlib")
-        plt.close(fig)
-        fig, ax, backend = _plain_map()
-        sc = ax.scatter(catalog["longitude"], catalog["latitude"],
-                        c=pd.to_numeric(catalog.get("magnitude"),
-                                        errors="coerce").fillna(0.0),
-                        cmap="YlOrRd", edgecolors="black", linewidths=0.3,
-                        s=12 + 8 * pd.to_numeric(
-                            catalog.get("magnitude"),
-                            errors="coerce").fillna(0.0),
-                        label="earthquake", zorder=3)
-        ax.scatter(stations["longitude"], stations["latitude"], marker="^",
-                   c="blue", s=50, edgecolors="black", linewidths=0.4,
-                   label="station", zorder=4)
-        for row in stations.itertuples():
-            code = getattr(row, "station_code", str(row.station))
-            ax.annotate(code, (row.longitude, row.latitude),
-                        textcoords="offset points", xytext=(0, 7),
-                        ha="center", fontsize=7, color="blue", zorder=5)
-        _annotate_events(ax, catalog)
+    for opts in attempts:
+        fig = None
+        backend, layers = "matplotlib", []
         try:
-            fig.colorbar(sc, ax=ax, shrink=0.7, label="Magnitude")
-        except Exception:
-            pass
-        ax.set_xlabel("Longitude")
-        ax.set_ylabel("Latitude")
-        ax.set_title("Epicenter distribution")
-        ax.legend(loc="upper left")
-        fig.tight_layout()
-        fig.savefig(out_png, dpi=200)
-    plt.close(fig)
-    return backend
+            fig, backend, layers = _draw_epicenter_figure(
+                catalog, stations, mags, extent, **opts)
+            fig.savefig(out_png, dpi=200)
+        except Exception as exc:
+            warn(f"{backend} render failed "
+                 f"({', '.join(layers) if layers else 'no basemap'}): {exc}; "
+                 f"retrying with a simpler basemap")
+            if fig is not None:
+                plt.close(fig)
+            continue
+        plt.close(fig)
+        return backend, layers
+    fail("epicenter map could not be rendered by any backend")
 
 
 def _pygmt_event_text(fig, catalog, max_labels=30):
@@ -384,6 +442,387 @@ def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
     return info
 
 
+def _fmt(value, spec: str = ".2f", default: str = "—") -> str:
+    """Format a number that may be missing/NaN for the Markdown report."""
+    import pandas as pd
+    if value is None:
+        return default
+    try:
+        if pd.isna(value):
+            return default
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, float) and not np.isfinite(value):
+        return default
+    try:
+        return format(float(value), spec)
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _fmt_time(value) -> str:
+    """UTC timestamp as ``YYYY-MM-DD HH:MM:SS`` (placeholder when missing)."""
+    import pandas as pd
+    if value is None:
+        return "—"
+    try:
+        ts = pd.Timestamp(value)
+    except Exception:
+        return "—"
+    if pd.isna(ts):
+        return "—"
+    if ts.tzinfo is not None:
+        ts = ts.tz_convert("UTC").tz_localize(None)
+    return ts.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _md_table(headers, rows) -> str:
+    """Render ``rows`` as a GitHub-flavoured Markdown table."""
+    lines = ["| " + " | ".join(headers) + " |",
+             "|" + "|".join(["---"] * len(headers)) + "|"]
+    lines += ["| " + " | ".join(str(c) for c in row) + " |" for row in rows]
+    return "\n".join(lines)
+
+
+def _azimuth_deg(lat0, lon0, lat1, lon1) -> float:
+    """Initial great-circle azimuth from (lat0, lon0) to (lat1, lon1), °N."""
+    p0, p1 = np.radians(lat0), np.radians(lat1)
+    dl = np.radians(lon1 - lon0)
+    x = np.sin(dl) * np.cos(p1)
+    y = np.cos(p0) * np.sin(p1) - np.sin(p0) * np.cos(p1) * np.cos(dl)
+    return float(np.degrees(np.arctan2(x, y)) % 360.0)
+
+
+def _azimuthal_gap(lat0, lon0, coords) -> float | None:
+    """Largest azimuthal gap (°); returns None when fewer than 3 stations."""
+    if len(coords) < 3:
+        return None
+    az = sorted(_azimuth_deg(lat0, lon0, lat, lon) for lat, lon in coords)
+    gaps = [(az[(i + 1) % len(az)] - az[i]) % 360.0 for i in range(len(az))]
+    return round(float(max(gaps)), 1)
+
+
+def _station_coords(stations) -> dict:
+    """``(NET, STA)`` → ``(lat, lon)``, to map diagnostic ``trace_id`` rows."""
+    coords = {}
+    has_net = {"network", "station_code"} <= set(stations.columns)
+    for row in stations.itertuples():
+        if has_net:
+            key = (str(row.network).upper(), str(row.station_code).upper())
+        else:
+            parts = str(row.station).split(".")
+            if len(parts) < 2:
+                continue
+            key = (parts[0].upper(), parts[1].upper())
+        try:
+            coords[key] = (float(row.latitude), float(row.longitude))
+        except (TypeError, ValueError):
+            continue
+    return coords
+
+
+def _ml_stats_from_diag(catalog_path, catalog, stations) -> dict:
+    """Per-event summary of the single-station ML diagnostics (p07).
+
+    p07 writes one row per trace carrying a Wood–Anderson amplitude to
+    ``<catalog>.magnitude_diag.csv``; this aggregates it into 参与台站/道数、
+    离散度、震中距范围与方位角间隙。离散度沿用 p07 的口径（偏离单台中位
+    震级 0.5 级以上视为异常并剔除），便于和目录中的最终 ML 对齐。
+    """
+    import pandas as pd
+    diag_path = Path(catalog_path).with_suffix(".magnitude_diag.csv")
+    if not diag_path.exists():
+        warn(f"magnitude diagnostics not found ({diag_path.name}); "
+             f"per-station ML statistics omitted from the report")
+        return {}
+    try:
+        diag = pd.read_csv(diag_path)
+    except Exception as exc:
+        warn(f"magnitude diagnostics unreadable ({exc}); per-station ML "
+             f"statistics omitted")
+        return {}
+    if not {"event_id", "single_ml"} <= set(diag.columns):
+        warn("magnitude diagnostics lacks event_id/single_ml; skipped")
+        return {}
+
+    coords = _station_coords(stations)
+    ev_loc = {}
+    for row in catalog.itertuples():
+        try:
+            ev_loc[str(row.event_id)] = (float(row.latitude),
+                                         float(row.longitude))
+        except (TypeError, ValueError):
+            continue
+    has_trace = "trace_id" in diag.columns
+
+    stats = {}
+    for eid, grp in diag.groupby("event_id"):
+        ml = pd.to_numeric(grp["single_ml"], errors="coerce").dropna()
+        if ml.empty:
+            continue
+        med = float(ml.median())
+        kept = ml[np.abs(ml.to_numpy() - med) <= 0.5]
+        if kept.empty:
+            kept = ml
+
+        stations_used = []
+        if has_trace:
+            for tid in grp["trace_id"].astype(str):
+                parts = tid.split(".")
+                stations_used.append(
+                    (parts[0].upper(), parts[1].upper())
+                    if len(parts) >= 2 else ("", parts[0].upper()))
+        uniq = sorted(set(stations_used))
+
+        dist = pd.to_numeric(grp.get("epicentral_km"), errors="coerce").dropna()
+        loc = ev_loc.get(str(eid))
+        gap = None
+        if loc is not None and uniq:
+            gap = _azimuthal_gap(loc[0], loc[1],
+                                 [coords[k] for k in uniq if k in coords])
+        stats[str(eid)] = {
+            "n_traces": int(ml.size),
+            "n_stations": len(uniq) if uniq else None,
+            "ml_min": float(ml.min()),
+            "ml_max": float(ml.max()),
+            "ml_median": med,
+            "ml_std": float(kept.std()) if kept.size > 1 else None,
+            "n_rejected": int(ml.size - kept.size),
+            "dist_min_km": float(dist.min()) if not dist.empty else None,
+            "dist_max_km": float(dist.max()) if not dist.empty else None,
+            "az_gap_deg": gap,
+        }
+    log(f"Magnitude diagnostics: single-station ML summarised for "
+        f"{len(stats)}/{len(catalog)} events")
+    return stats
+
+
+def _quality_flag(n_stations, rms_s, has_mag: bool = True, *, rms_ref=None,
+                  az_gap=None) -> str:
+    """Rough per-event quality grade.
+
+    Graded mainly on station count and azimuthal coverage; the travel-time
+    RMS is only used as an outlier check against the catalog median, because
+    ``rms_s`` in the final catalog reflects pick-time scatter rather than a
+    calibrated travel-time residual level.
+    """
+    if not has_mag:
+        return "无震级"
+    if not n_stations:
+        return "待查"
+    if az_gap is not None and az_gap > 270:
+        return "待查"
+    if n_stations < 5:
+        return "待查"
+    if rms_ref and rms_s is not None and rms_s > 2.0 * rms_ref:
+        return "一般"
+    if n_stations >= 8 and (az_gap is None or az_gap <= 180):
+        return "好"
+    return "一般"
+
+
+def _write_report(outdir: Path, catalog, stations, paths: dict, map_backend,
+                  map_layers, gr, pick_info, backend_note) -> Path:
+    """Write ``report.md``: 概要 / 统计 / 逐事件表格 / 完整性检查 / 图件."""
+    import pandas as pd
+    from datetime import datetime, timezone
+
+    def num(col):
+        if col not in catalog.columns:
+            return pd.Series(dtype="float64")
+        return pd.to_numeric(catalog[col], errors="coerce")
+
+    mag = num("magnitude").dropna()
+    depth = num("depth_km").dropna()
+    rms = num("rms_s").dropna()
+    picks_n = num("n_picks").dropna()
+    lat, lon = num("latitude"), num("longitude")
+    times = pd.to_datetime(catalog.get("time"), errors="coerce", utc=True)
+    times = times.dropna()
+    diag = _ml_stats_from_diag(paths["catalog"], catalog, stations)
+
+    det = ""
+    if len(times) >= 2:
+        det = (f"{times.min().strftime('%Y-%m-%d %H:%M')} – "
+               f"{times.max().strftime('%Y-%m-%d %H:%M')} UTC")
+    n_networks = (stations["network"].nunique()
+                  if "network" in stations.columns else None)
+
+    # ── 逐事件表格 ──
+    rms_ref = float(rms.median()) if len(rms) else None
+    ev_rows, ml_rows = [], []
+    per_event_stations = {}
+    for row in catalog.itertuples():
+        eid = str(getattr(row, "event_id", "") or "—")
+        st = diag.get(eid, {})
+        n_sta = st.get("n_stations")
+        n_tr = st.get("n_traces")
+        if n_sta is None and n_tr is None:
+            # no diagnostics: the catalog only carries the retained-trace count
+            n_sta = getattr(row, "n_stations_used", None)
+            n_tr = None
+        per_event_stations[eid] = n_sta
+        mag_v = pd.to_numeric(
+            pd.Series([getattr(row, "magnitude", None)]), errors="coerce").iloc[0]
+        rms_v = pd.to_numeric(
+            pd.Series([getattr(row, "rms_s", None)]), errors="coerce").iloc[0]
+        rms_v = float(rms_v) if pd.notna(rms_v) else None
+        ev_rows.append([
+            eid, _fmt_time(getattr(row, "time", None)),
+            _fmt(getattr(row, "latitude", None), ".4f"),
+            _fmt(getattr(row, "longitude", None), ".4f"),
+            _fmt(getattr(row, "depth_km", None), ".1f"),
+            _fmt(mag_v, ".2f"),
+            _fmt(n_sta, ".0f"),
+            _fmt(n_tr, ".0f"),
+            _fmt(getattr(row, "n_picks", None), ".0f"),
+            _fmt(rms_v, ".2f"),
+            _quality_flag(n_sta, rms_v, pd.notna(mag_v), rms_ref=rms_ref,
+                          az_gap=st.get("az_gap_deg")),
+        ])
+        if eid in diag:
+            s = diag[eid]
+            ml_rows.append([
+                eid,
+                f"{_fmt(s['ml_min'], '.2f')} – {_fmt(s['ml_max'], '.2f')}",
+                _fmt(s["ml_median"], ".2f"),
+                _fmt(s["ml_std"], ".2f"),
+                _fmt(s["n_rejected"], ".0f"),
+                f"{_fmt(s['dist_min_km'], '.1f')} – "
+                f"{_fmt(s['dist_max_km'], '.1f')}",
+                _fmt(s["az_gap_deg"], ".1f"),
+            ])
+
+    ev_table = _md_table(
+        ["事件", "发震时刻 (UTC)", "纬度", "经度", "深度 (km)", "ML",
+         "台站数", "参与道数", "拾取数", "RMS (s)", "质量"], ev_rows)
+    ml_table = ""
+    if ml_rows:
+        ml_table = _md_table(
+            ["事件", "单台 ML 范围", "单台 ML 中位", "单台 ML 标准差",
+             "剔除道数", "震中距 (km)", "方位角间隙 (°)"], ml_rows)
+
+    # ── 完整性检查 ──
+    checks = []
+    if "event_id" in catalog.columns:
+        dup_id = int(catalog["event_id"].duplicated().sum())
+        checks.append(("event_id 唯一", dup_id == 0, f"重复 {dup_id} 个"))
+    bad_loc = int((lat.isna() | lon.isna()).sum()) if len(lat) else len(catalog)
+    checks.append(("经纬度完整", bad_loc == 0, f"缺失 {bad_loc} 个事件"))
+    bad_depth = int(depth.isna().sum()) if "depth_km" in catalog.columns else 0
+    checks.append(("深度完整", bad_depth == 0, f"缺失 {bad_depth} 个事件"))
+    n_no_mag = len(catalog) - len(mag)
+    checks.append(("震级完整", n_no_mag == 0, f"缺失 {n_no_mag} 个事件"))
+    n_off = int(((lat.abs() > 90) | (lon.abs() > 180)).sum()) if len(lat) else 0
+    checks.append(("坐标范围合理", n_off == 0, f"越界 {n_off} 个事件"))
+    dup_t = int(times.duplicated().sum())
+    checks.append(("发震时刻无重复", dup_t == 0, f"重复 {dup_t} 个事件"))
+    few = [k for k, v in per_event_stations.items()
+           if v is not None and v < 3]
+    checks.append(("参与台站 ≥ 3", not few,
+                   f"{len(few)} 个事件台站偏少" + (f"（{', '.join(few[:5])}）"
+                                                if few else "")))
+    check_lines = "\n".join(
+        f"- {'✅' if ok else '⚠️'} {name}：{detail if not ok else '通过'}"
+        for name, ok, detail in checks)
+
+    # ── 输入数据 ──
+    inputs = [f"- 事件目录: `{paths['catalog']}`（{len(catalog)} 个事件）",
+              f"- 台站表: `{paths['stations']}`（{len(stations)} 个台站"
+              + (f"，{n_networks} 个台网）" if n_networks else "）")]
+    if paths.get("picks"):
+        pick_line = f"- 拾取文件: `{paths['picks']}`"
+        try:
+            picks = pd.read_csv(paths["picks"], usecols=["phase"])
+            counts = picks["phase"].astype(str).str.upper().value_counts()
+            detail = "，".join(f"{k} {v}" for k, v in counts.items())
+            pick_line += f"（{len(picks)} 条：{detail}）"
+        except Exception:
+            pass
+        inputs.append(pick_line)
+    if paths.get("waveforms") and pick_info:
+        inputs.append(f"- 波形目录: `{paths['waveforms']}`（拾取样例图）")
+    elif paths.get("waveforms"):
+        inputs.append(f"- 波形目录: `{paths['waveforms']}`（未生成拾取样例图）")
+    diag_path = Path(paths["catalog"]).with_suffix(".magnitude_diag.csv")
+    if diag_path.exists():
+        inputs.append(f"- 震级诊断: `{diag_path.name}`"
+                      f"（{sum(s['n_traces'] for s in diag.values())} 条单台记录）")
+
+    avg_sta = (np.mean([s["n_stations"] for s in diag.values()
+                        if s["n_stations"]]) if diag else None)
+    avg_tr = np.mean([s["n_traces"] for s in diag.values()]) if diag else None
+    n_rejected = sum(s["n_rejected"] for s in diag.values()) if diag else None
+    input_block = "\n".join(inputs)
+
+    pick_note = ""
+    if pick_info:
+        pick_note = (f"> 拾取样例图为聚类事件 #{pick_info['event']}，绘制了 "
+                     f"{pick_info['stations_plotted']}/"
+                     f"{pick_info['n_stations']} 个台站、"
+                     f"{pick_info['picks_plotted']} 条拾取。")
+
+    figures = "\n".join(
+        f"![{title}]({fname})" for title, fname in
+        [("震中分布", "epicenter_map.png"), ("G-R关系", "gr_relation.png"),
+         ("深度分布", "depth_histogram.png"), ("走时残差", "residuals.png"),
+         ("拾取样例", "pick_samples.png")]
+        if (outdir / fname).exists())
+
+    report = f"""# 地震目录处理报告
+
+生成时间: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}
+
+## 概要
+- **事件总数**: {len(catalog)}
+- **台站数**: {len(stations)}{f'（{n_networks} 个台网）' if n_networks else ''}
+- **有震级的事件数**: {len(mag)} ({100 * len(mag) / max(len(catalog), 1):.0f}%)
+- **目录时间范围**: {det or '—'}
+- **制图后端**: {map_backend}
+- **底图图层**: {', '.join(map_layers) if map_layers else '无（纯 Matplotlib 点图）'}
+- **定位后端备注**: {backend_note or '见 SKILL.md Phase 5/6'}
+
+## 统计
+- 深度: 中位 {_fmt(depth.median(), '.1f')} km，范围 {_fmt(depth.min(), '.1f')} – {_fmt(depth.max(), '.1f')} km
+- 震级 (ML): 范围 {_fmt(mag.min(), '.2f')} – {_fmt(mag.max(), '.2f')}，中位 {_fmt(mag.median(), '.2f')}，均值 {_fmt(mag.mean(), '.2f')}
+- 完整性震级 Mc: {_fmt(gr.get('mc'), '.2f', 'N/A') if gr else 'N/A'}（b 值 {_fmt(gr.get('b'), '.2f', 'N/A（样本量不足）') if gr else 'N/A'}）
+- 走时残差 RMS: 均值 {_fmt(rms.mean(), '.3f')} s，中位 {_fmt(rms.median(), '.3f')} s，最大 {_fmt(rms.max(), '.3f')} s
+  （目录 `rms_s` 反映定位所用拾取的绝对时刻离散水平，量级偏大时以台站数与方位覆盖作为主要质量依据）
+- 单事件平均: 台站 {_fmt(avg_sta, '.0f')} 个 / 参与道 {_fmt(avg_tr, '.0f')} 条 / 拾取 {_fmt(picks_n.mean(), '.0f')} 条
+- 单台 ML 异常剔除: {_fmt(n_rejected, '.0f')} 条道（偏离中位 0.5 级以上）
+
+## 事件目录与震级
+
+{ev_table}
+
+> 台站数 / 参与道数 取自 p07 单台震级诊断（无诊断记录时回退为目录中的 `n_stations_used`；后者统计的是保留道数，可能大于台站数）。
+> 质量分级：台站数 ≥ 8 且方位角间隙 ≤ 180° → 好；台站数 ≥ 5 → 一般；台站数 < 5 或方位角间隙 > 270° → 待查；目录缺震级 → 无震级。
+
+## 单台震级质控
+
+{ml_table if ml_table else '（未找到 p07 震级诊断文件，跳过本节）'}
+
+> 单台 ML 范围为逐道结果，未剔除离群；中位/标准差为剔除偏离中位 0.5 级以上的道之后的结果，与目录最终 ML 的口径一致。
+> 方位角间隙由台站经纬度计算，仅统计能在台站表中匹配到坐标的台站。
+
+## 数据完整性检查
+
+{check_lines}
+
+## 输入数据
+
+{input_block}
+
+## 图件
+
+{figures}
+{pick_note}
+"""
+    report_path = outdir / "report.md"
+    report_path.write_text(report, encoding="utf-8")
+    return report_path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Phase 8: QC plots and report")
     parser.add_argument("--catalog", required=True)
@@ -406,7 +845,10 @@ def main() -> None:
     outdir = ensure_dir(args.output_dir)
 
     log("Plotting epicenter map...")
-    map_backend = plot_epicenter_map(catalog, stations, outdir / "epicenter_map.png")
+    map_backend, map_layers = plot_epicenter_map(
+        catalog, stations, outdir / "epicenter_map.png")
+    log(f"Epicenter map drawn by {map_backend}: "
+        f"{', '.join(map_layers) if map_layers else 'no basemap'}")
 
     log("Computing G-R relation...")
     gr = plot_gr(catalog, outdir / "gr_relation.png")
@@ -429,41 +871,18 @@ def main() -> None:
     else:
         warn("--picks not given or missing; skipping pick sample plot")
 
-    report_path = outdir / "report.md"
-    mag_series = pd.to_numeric(catalog.get("magnitude"), errors="coerce").dropna()
-    report = f"""# 地震目录处理报告
-
-## 概要
-- **事件总数**: {len(catalog)}
-- **台站数**: {len(stations)}
-- **有震级的事件数**: {len(mag_series)} ({100 * len(mag_series) / max(len(catalog), 1):.0f}%)
-- **制图后端**: {map_backend}
-- **定位后端备注**: {args.backend_note or '见 SKILL.md Phase 5/6'}
-
-## 统计
-- 中位深度: {catalog['depth_km'].median():.1f} km
-- 震级范围: {mag_series.min() if len(mag_series) else 'N/A'} – {mag_series.max() if len(mag_series) else 'N/A'}
-- 完整性震级 Mc: {gr['mc'] if gr else 'N/A'}
-- b 值: {gr['b'] if gr else 'N/A'}
-- 平均走时残差: {res['mean_rms_s'] if res else 'N/A'} s
-
-## 图件
-![震中分布](epicenter_map.png)
-![G-R关系](gr_relation.png)
-![深度分布](depth_histogram.png)
-![走时残差](residuals.png)
-![拾取样例](pick_samples.png)
-
-## 注意事项
-- 若未做仪器响应去除，ML 震级不可用（见 Phase 2/7 说明）。
-- 纯 Python 定位后端深度误差典型为 2–5 km；如需亚公里级精度请使用 HypoDD。
-"""
-    report_path.write_text(report, encoding="utf-8")
+    report_path = _write_report(
+        outdir, catalog, stations,
+        paths=dict(catalog=args.catalog, stations=args.stations,
+                   picks=args.picks, waveforms=args.waveforms),
+        map_backend=map_backend, map_layers=map_layers, gr=gr,
+        pick_info=pick_info, backend_note=args.backend_note)
 
     emit({
         "status": "ok",
         "n_events": len(catalog),
         "map_backend": map_backend,
+        "map_layers": map_layers,
         "mc": gr["mc"] if gr else None,
         "b_value": gr["b"] if gr else None,
         "mean_rms_s": res["mean_rms_s"] if res else None,

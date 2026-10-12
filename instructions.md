@@ -49,7 +49,7 @@ Phase 3: 事件检测与拾取  → STA/LTA 触发 或 PhaseNet 深度学习拾�
 Phase 4: 震相关联        → GaMMA 高斯混合关联 或 REAL 叠加关联
 Phase 5: 绝对定位        → NonLinLoc 网格搜索 或 HYPOINVERSE
 Phase 6: 相对定位        → HypoDD 双差精修（ph2dt 互相关 + hypoDD 反演）
-Phase 7: 震级计算        → ML 近震震级（Wood-Anderson 仿真）
+Phase 7: 震级计算        → ML 近震震级（Wood-Anderson 仿真 + Bakun & Joyner 1984）
 Phase 8: 质检与制图      → 残差分析、G-R 关系、震中分布图、剖面图
 ```
 
@@ -445,9 +445,9 @@ volumes:
 | P2 预处理             | ObsPy                   | ObsPy（不变）                                                     | ✅ 完全等价       | 无                 |
 | P3 震相拾取           | SeisBench/PhaseNet      | SeisBench/PhaseNet（不变）                                        | ✅ 完全等价       | 无                 |
 | P4 震相关联           | GaMMA                   | GaMMA 本身即纯 Python（AI4EPS/gamma）                             | ✅ 完全等价       | 无                 |
-| **P5 绝对定位** | NonLinLoc（C 编译）     | 自写网格搜索定位器：`obspy.taup` 走时 + numpy 网格搜索/最小二乘 | ⚠️ 可跑通但降级 | 见 7.3             |
+| **P5 绝对定位** | NonLinLoc（C 编译）     | 自写 Geiger 迭代定位器：`obspy.taup` 走时 + 阻尼加权最小二乘 | ⚠️ 可跑通但降级 | 见 7.3             |
 | **P6 相对定位** | HypoDD/ph2dt（Fortran） | 无成熟纯 Python 实现；可自写简化版 DD 或跳过                      | ❌ 最大短板       | 见 7.3             |
-| P7 震级计算           | ObsPy WA 仿真           | ObsPy（不变）                                                     | ✅ 完全等价       | 无                 |
+| P7 震级计算           | ObsPy WA 仿真           | ObsPy（不变，Bakun & Joyner 1984 标定式）                          | ✅ 完全等价       | 无                 |
 | P8 制图质检           | PyGMT                   | 改用 Cartopy + Matplotlib                                         | ✅ 可行           | 出版级地图质量略降 |
 
 ### 7.3 两个关键降级点
@@ -455,7 +455,7 @@ volumes:
 #### P5 绝对定位：可行，牺牲可控
 
 - **TauP 不需要 Java**——ObsPy 内置 `obspy.taup` 是 TauP 的纯 Python 移植，IASP91/AK135 走时计算完全覆盖，直接消除 Java 依赖。
-- 用 `obspy.taup` + 一维分层速度模型做网格搜索定位是教科书级算法，数百行 numpy 即可实现。
+- 用 `obspy.taup` + 一维分层速度模型做 Geiger 迭代定位是教科书级算法，数百行 numpy 即可实现（无需网格穷举，单事件约 1 s）。
 - 牺牲清单：
   - 失去 NonLinLoc 的概率密度 PDF 输出（不确定度椭圆、边缘分布）
   - 只能用一维速度模型，无法利用三维结构 → 深度误差通常从 <2km 恶化到 2–5km
@@ -482,7 +482,7 @@ volumes:
 
 ```mermaid
 flowchart LR
-    A[P1-P4,P7,P8<br/>纯Python无损] --> B[P5 绝对定位<br/>taup+网格搜索<br/>深度误差2-5km]
+    A[P1-P4,P7,P8<br/>纯Python无损] --> B[P5 绝对定位<br/>taup+Geiger迭代<br/>深度误差2-5km]
     B --> C{需要精定位?}
     C -->|否| D[✅ 工作流完整跑通]
     C -->|是| E[❌ 必须引入HypoDD<br/>回到Docker/编译路线]

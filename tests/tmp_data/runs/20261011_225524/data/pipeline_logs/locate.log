@@ -1,0 +1,27 @@
+{
+  "status": "ok",
+  "backend": "python-geiger",
+  "n_events_input": 14,
+  "n_located": 14,
+  "catalog_file": "data\\locate\\catalog_abs.csv",
+  "velocity_model": "C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\assets\\iasp91.tvel",
+  "cell_km": 5.0,
+  "note": "1-D model Geiger iteration (damped weighted least squares); depth error typically 2-5 km"
+}
+
+---STDERR---
+[INFO] Loaded 14 events, 644 picks, 157 stations, 6 velocity layers
+[INFO] ev000001: lat=35.840 lon=-120.937 dep=40.0km rms=24.24s (119 obs, 8 iter)
+[INFO] ev000002: lat=36.086 lon=-122.972 dep=40.0km rms=24.24s (115 obs, 6 iter)
+[INFO] ev000003: lat=35.860 lon=-121.224 dep=40.0km rms=23.15s (68 obs, 5 iter)
+[INFO] ev000004: lat=35.964 lon=-123.065 dep=10.0km rms=20.95s (66 obs, 4 iter)
+[INFO] ev000005: lat=36.172 lon=-121.423 dep=40.0km rms=23.72s (67 obs, 10 iter)
+[INFO] ev000006: lat=36.128 lon=-120.491 dep=40.0km rms=33.30s (39 obs, 7 iter)
+[INFO] ev000007: lat=35.928 lon=-118.632 dep=10.0km rms=38.58s (37 obs, 4 iter)
+[INFO] ev000008: lat=36.120 lon=-121.230 dep=40.0km rms=35.48s (48 obs, 8 iter)
+[INFO] ev000009: lat=36.111 lon=-121.241 dep=40.0km rms=38.18s (39 obs, 9 iter)
+[INFO] ev000010: lat=35.363 lon=-121.334 dep=40.0km rms=47.78s (45 obs, 6 iter)
+[INFO] ev000011: lat=36.096 lon=-121.221 dep=40.0km rms=35.55s (72 obs, 7 iter)
+[INFO] ev000012: lat=36.058 lon=-121.262 dep=40.0km rms=39.37s (43 obs, 14 iter)
+[INFO] ev000013: lat=36.073 lon=-120.311 dep=40.0km rms=45.10s (37 obs, 7 iter)
+[INFO] ev000014: lat=35.997 lon=-121.225 dep=40.0km rms=35.41s (41 obs, 16 iter)

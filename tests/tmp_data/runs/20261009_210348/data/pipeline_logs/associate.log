@@ -1,0 +1,42 @@
+Associating 147 picks with 1 CPUs
+............{
+  "status": "ok",
+  "n_picks_input": 147,
+  "n_events": 14,
+  "events_file": "data\\assoc\\events.csv",
+  "config_used": "C:\\Users\\Admin\\Desktop\\Geophysics\\seismic-workflow\\assets\\gamma_config.json"
+}
+
+---STDERR---
+[INFO] Loaded GaMMA config from C:\Users\Admin\Desktop\Geophysics\seismic-workflow\assets\gamma_config.json
+[INFO] Set bfgs time bounds to [-2171.592, 23887.512] (data span 21716s)
+[INFO] Dropping picks from 1 unknown stations: ['IU.COLA.00']...
+[INFO] Associating 147 picks across 5 stations...
+
+Clustering (eps=20.83):   0%|          | 0/13 [00:00<?, ?it/s]
+Clustering (eps=20.83): 100%|��������������������| 13/13 [00:00<00:00, 92731.21it/s]
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+C:\Users\Admin\Desktop\Geophysics\.venv\Lib\site-packages\gamma\seismic_ops.py:302: OptimizeWarning: Unknown solver options: iprint
+  opt = scipy.optimize.minimize(
+[INFO] Found 14 candidate events

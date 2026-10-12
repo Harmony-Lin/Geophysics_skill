@@ -59,10 +59,12 @@ def main() -> None:
         "numpy": _has_module("numpy"),
     }
 
-    log("Probing compiled location binaries (NLLoc / HypoDD)...")
+    log("Probing location backends (NLLoc / relocDD-py)...")
+    # relocDD-py is installed from git (packages/relocdd-py/install.py)
+    relocdd_ok = _has_module("ph2dt") and _has_module("hypoDD")
     backends = {
         "nll": shutil.which("NLLoc") is not None or shutil.which("nll") is not None,
-        "hypodd": shutil.which("hypoDD") is not None and shutil.which("ph2dt") is not None,
+        "hypodd": relocdd_ok,
     }
 
     log("Checking SeisBench model cache...")

@@ -1,0 +1,100 @@
+{
+  "status": "ok",
+  "magnitude_available": true,
+  "n_events": 14,
+  "n_events_with_magnitude": 14,
+  "median_magnitude": 3.0,
+  "ml_relation": "Bakun & Joyner (1984)",
+  "input_units": "VEL",
+  "response_removed_here": false,
+  "catalog_file": "data\\locate\\catalog_final.csv",
+  "diagnostics_file": "data\\locate\\catalog_final.magnitude_diag.csv"
+}
+
+---STDERR---
+[INFO] Loaded station list from data/stations/stations.csv (157 stations)
+[INFO] Loading waveforms...
+[INFO] Assuming waveforms are in 'VEL' (p02 remove_response); skipping repeated response removal
+[INFO] Simulating Wood-Anderson response...
+[INFO] Total traces loaded: 5002
+[INFO] Station list: 157 stations, columns=['station', 'network', 'station_code', 'latitude', 'longitude', 'elevation_m'], sample_stations=['AZ.KNW.', 'AZ.LVA2.', 'AZ.RDM.', 'BK.BCCR.00', 'BK.BDM.00']
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000001 @ (35.8398, -120.9371), depth=40.0 km
+[INFO]   [AZ.KNW.HHE] epi_dist=452.47 km, hyp_dist=454.23 km (sta_lat=33.7141, sta_lon=-116.7119)
+[INFO]   [AZ.KNW.HHN] epi_dist=452.47 km, hyp_dist=454.23 km (sta_lat=33.7141, sta_lon=-116.7119)
+[INFO]   [AZ.LVA2.HHE] epi_dist=486.70 km, hyp_dist=488.34 km (sta_lat=33.3516, sta_lon=-116.5615)
+[INFO]   -> ML=4.20 (from 257 stations, raw range=[3.50, 5.72])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000002 @ (36.0858, -122.9720), depth=40.0 km
+[INFO]   -> ML=3.96 (from 139 stations, raw range=[2.88, 6.36])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000003 @ (35.8599, -121.2236), depth=40.0 km
+[INFO]   -> ML=3.40 (from 227 stations, raw range=[0.22, 5.25])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000004 @ (35.9636, -123.0652), depth=10.0 km
+[INFO]   -> ML=3.26 (from 116 stations, raw range=[0.88, 6.04])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000005 @ (36.1722, -121.4231), depth=40.0 km
+[INFO]   -> ML=2.81 (from 176 stations, raw range=[0.37, 4.86])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000006 @ (36.1278, -120.4908), depth=40.0 km
+[INFO]   -> ML=3.05 (from 187 stations, raw range=[0.17, 4.46])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000007 @ (35.9277, -118.6319), depth=10.0 km
+[INFO]   -> ML=3.55 (from 147 stations, raw range=[-0.23, 5.07])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000008 @ (36.1203, -121.2299), depth=40.0 km
+[INFO]   -> ML=2.90 (from 201 stations, raw range=[0.08, 4.27])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000009 @ (36.1114, -121.2406), depth=40.0 km
+[INFO]   -> ML=2.86 (from 208 stations, raw range=[0.07, 4.24])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000010 @ (35.3626, -121.3343), depth=40.0 km
+[INFO]   -> ML=3.13 (from 213 stations, raw range=[1.14, 4.28])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000011 @ (36.0963, -121.2209), depth=40.0 km
+[INFO]   -> ML=2.68 (from 387 stations, raw range=[0.09, 4.43])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000012 @ (36.0583, -121.2624), depth=40.0 km
+[INFO]   -> ML=2.70 (from 233 stations, raw range=[-0.32, 4.46])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000013 @ (36.0726, -120.3108), depth=40.0 km
+[INFO]   -> ML=2.95 (from 175 stations, raw range=[0.72, 4.80])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:238: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000014 @ (35.9966, -121.2252), depth=40.0 km
+[INFO]   -> ML=2.69 (from 196 stations, raw range=[-9.58, 3.97])
+[INFO] 
+=== Magnitude Calculation Summary ===
+[INFO]   Total trace-event pairs processed: 46018
+[INFO]   Station matched: 46018
+[INFO]   Station NOT matched: 0 (used default 10 km distance)
+[INFO] ===========================
+[INFO] Magnitude diagnostics written to data\locate\catalog_final.magnitude_diag.csv

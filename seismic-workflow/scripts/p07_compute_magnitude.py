@@ -13,70 +13,73 @@ from common import emit, ensure_dir, fail, log, run_main, warn  # noqa: E402
 
 WAVEFORM_EXTS = {".mseed", ".miniseed", ".seed", ".sac", ".msd"}
 
-# Wood-Anderson 地震仪极点/零点/增益（经典定义）
+# Wood-Anderson 地震仪极点/零点/灵敏度。
+# 取值与 obspy.signal.invsim.WOODANDERSON 完全一致：simulate() 中 gain 是与频率
+# 无关的乘性因子、sensitivity 再单独相乘，而 WA 的静态放大倍率已经编码在极零点里。
+# 早期版本把 2800 当作 "静态放大倍率" 放进 gain、并把 sensitivity 设为 1，实测
+# 振幅偏大 1.346 倍（≈ +0.13 级）；二者在 obspy 中是可交换的乘性因子，容易写错。
+#
+# 输入域：WA 的 paz 只有一个原点零点，因此 simulate() 的输入必须是地面速度，
+# 这与 obspy 在 estimate_magnitude 内部「先除以 VEL 响应、再乘 WA 极零点」一致。
 WA_POLES = [-6.283 + 4.7124j, -6.283 - 4.7124j]
 WA_ZEROS = [0j]
-WA_GAIN = 2800.0          # 经典静态放大倍率
-WA_SENSITIVITY = 1.0
+WA_GAIN = 1.0
+WA_SENSITIVITY = 2080.0
 
-# Hutton & Boore (1987) 南加州标定系数
-# 标准形式（Richter 原始定义，A 单位 mm，D 为震源距 km）：
-#   ML = log10(A) + 1.11*log10(D) + 0.00189*D - 2.09
-# 本脚本振幅使用微米 (μm)，需将常数 -2.09 换算为 -5.09
-# 如果你的研究区域不在南加州，请替换为区域标定系数
-HB_C1 = 1.11
-HB_C2 = 0.00189
-HB_C3 = -5.09
+# 标定式：Bakun & Joyner (1984)，与 obspy.signal.invsim.estimate_magnitude 同源，
+# 也是公开目录（tests/tmp_data，Templeton CA）中 ML 所用的尺度（见 tests/verify_ml.py）。
+#   ML = log10(A) + log10(D/100) + 0.00301*(D - 100) + 3.0
+# 其中 A 为 WA 零到峰位移振幅 (mm)，D 为震源距 (km)。
+# 如果你的研究区域超出该标定范围，请整体替换 _ml_from_wa_amplitude()，
+# 保持 A(mm) / D(km) 的入参约定即可。
+ML_ATTEN_COEF = 0.00301
+ML_CONST = 3.0
 
 
-def _hutton_boore_ml(amplitude_um: float, hypocentral_dist_km: float) -> float:
+def _ml_from_wa_amplitude(amplitude_mm: float, hypocentral_dist_km: float) -> float:
+    """由单台 WA 零到峰位移振幅 (mm) 与震源距 (km) 计算 ML。
+
+    Bakun & Joyner (1984), BSSA 74, 1827-1843.
     """
-    计算单次台站的 ML。
-    amplitude_um: WA 模拟后的最大位移振幅，单位微米 (μm)
-    hypocentral_dist_km: 震源距 (km)
-    """
-    a = max(amplitude_um, 1e-12)
-    r = max(hypocentral_dist_km, 1.0)
+    a = max(amplitude_mm, 1e-12)
+    d = max(hypocentral_dist_km, 1.0)
     return (np.log10(a)
-            + HB_C1 * np.log10(r)
-            + HB_C2 * r
-            + HB_C3)
+            + np.log10(d / 100.0)
+            + ML_ATTEN_COEF * (d - 100.0)
+            + ML_CONST)
 
 
-def _check_and_convert_to_displacement_um(tr, assume_units: str = "VEL") -> float | None:
+def _to_velocity(tr, assume_units: str = "VEL") -> bool:
+    """把单条 trace 换算到 WA paz 要求的输入域——地面速度 (m/s)。
+
+    MSEED 不保存 units 元数据：p02 写入的 tr.stats.units 读回时会丢失，
+    所以这里只认调用方显式给出的 --assume-units，绝不反过来改写 stats.units
+    （否则该参数形同虚设）。
     """
-    检查 trace 的物理单位，并返回最大位移振幅（微米）。
+    units = str(assume_units).upper().strip()
+    if units in ("M/S", "M/SEC", "VEL", "VELOCITY"):
+        return True
+    if units in ("M", "METERS", "DISP", "DISPLACEMENT"):
+        # 位移输入：WA 的 paz 只有一个原点零点，必须先微分回速度
+        tr.detrend("demean")
+        tr.detrend("linear")
+        tr.taper(max_percentage=0.05, type="hann")
+        tr.differentiate()
+        return True
+    warn(f"trace {tr.id} 单位 '{units}' 不受支持，跳过")
+    return False
 
-    注意：MSEED 格式不保存 units 元数据，p02 去响应后写入的
-    tr.stats.units 在读回时会丢失。因此这里优先读 stats.units，
-    缺失时回退到 --assume-units（默认 "VEL"，与 p02 的 VEL 输出一致）。
+
+def _wa_amplitude_mm(tr) -> float:
+    """窗口内 WA 零到峰位移振幅 (mm)。
+
+    取整段峰峰值的一半，与 obspy estimate_magnitude 的振幅约定一致，且对残余
+    偏置不敏感。obspy 约定下 simulate(WOODANDERSON) 输出的数值乘以 1000 即为
+    estimate_magnitude 使用的毫米振幅。
     """
-    units = getattr(tr.stats, "units", None)
-    units_upper = str(units).upper().strip() if units else str(assume_units).upper().strip()
-
-    if units_upper in ("M", "METERS", "DISP"):
-        # 位移，单位米 → 微米
-        return float(np.max(np.abs(tr.data))) * 1e6
-
-    if units_upper in ("M/S", "M/SEC", "VELOCITY"):
-        # 速度，单位 m/s → 对时间积分得到位移(m) → 再转微米
-        try:
-            tr_disp = tr.copy()
-            tr_disp.detrend("demean")
-            tr_disp.detrend("linear")
-            tr_disp.taper(max_percentage=0.05, type="hann")
-            tr_disp.integrate()
-            return float(np.max(np.abs(tr_disp.data))) * 1e6
-        except Exception as exc:
-            warn(f"trace {tr.id} 速度→位移积分失败 ({exc})，跳过")
-            return None
-
-    if units_upper in ("COUNTS", "COUNT"):
-        warn(f"trace {tr.id} 单位仍为 COUNTS，去响应可能失败，跳过")
-        return None
-
-    warn(f"trace {tr.id} 单位 '{units_upper}' 未识别，跳过")
-    return None
+    if tr.data.size == 0:
+        return 0.0
+    return float(tr.data.max() - tr.data.min()) / 2.0 * 1000.0
 
 
 def _is_horizontal_channel(channel: str) -> bool:
@@ -86,6 +89,18 @@ def _is_horizontal_channel(channel: str) -> bool:
     return channel[-1] in ("E", "N", "1", "2")
 
 
+def _station_code(row) -> str:
+    """从 stations.csv 的一行提取纯台站代码。
+
+    stations.csv 的 station 列形如 "AK.CCB."（带尾点），直接
+    split(".")[-1] 会得到空字符串；必须先去掉尾点。
+    优先使用显式的 station_code 列。
+    """
+    if "station_code" in row.index and str(row["station_code"]).strip():
+        return str(row["station_code"]).strip()
+    return str(row["station"]).strip().rstrip(".").split(".")[-1]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Phase 7: compute ML magnitudes (Wood-Anderson)")
@@ -93,11 +108,13 @@ def main() -> None:
     parser.add_argument("--waveforms", required=True)#这个waveform在传值的时候传的是raw还是processed？
     parser.add_argument("--stations", help="StationXML with response") #使用仪器响应文件来模拟WA地震仪的相应，得到ML震级
     parser.add_argument("--output", required=True)
-    parser.add_argument("--assume-units", default="DISP",
+    parser.add_argument("--assume-units", default="VEL",
                         choices=["VEL", "DISP", "COUNTS"],
-                        help="assumed physical units when trace metadata "
-                             "lacks units (MSEED drops it); this phase "
-                             "removes response to DISP")
+                        help="waveform units of --waveforms; MSEED drops the "
+                             "units metadata so it must be stated explicitly. "
+                             "VEL = ground velocity m/s (p02 output='VEL', "
+                             "default); DISP = displacement m; "
+                             "COUNTS = raw counts, response removed here")
     args = parser.parse_args()
 
     import pandas as pd
@@ -156,26 +173,37 @@ def main() -> None:
         fail("no valid waveforms loaded")
         return
 
-    # 上游 p02 已经执行过去响应（output=VEL），MSEED 写回会丢失 units。
-    # 为避免对已经物理化的数据再次反卷积导致振幅异常，默认跳过重复去响应，
-    # 仅当用户显式要求 --assume-units=COUNTS 时才执行。
-    needs_response_removal = (args.assume_units.upper() == "COUNTS")
-    if needs_response_removal:
-        log("Removing instrument response...")
+    # ── 统一到 WA paz 的输入域（地面速度）──
+    # 上游 p02 以 output="VEL" 去响应，所以 --assume-units 默认 VEL。
+    # 只有明确声明输入仍是原始 COUNTS 时才在这里去响应；注意必须是 VEL，
+    # 不能是 DISP（WA 的 paz 需要速度输入）。
+    if args.assume_units.upper() == "COUNTS":
+        log("Removing instrument response (output=VEL)...")
         try:
-            stream.remove_response(inventory=inventory, output="DISP",
+            stream.remove_response(inventory=inventory, output="VEL",
                                    water_level=60)
         except Exception as exc:
             fail(f"response removal failed ({exc}); "
                  "cannot compute reliable magnitudes without physical units")
             return
+        for tr in stream:
+            tr.stats.units = "M/S"
     else:
-        log("Assuming waveforms are already in physical units "
+        log(f"Assuming waveforms are in '{args.assume_units}' "
             "(p02 remove_response); skipping repeated response removal")
-
-    # 标记单位，因为 MSEED 写回会丢失 units 元数据
-    for tr in stream:
-        tr.stats.units = "M"
+        keep = Stream()
+        for tr in stream:
+            if _to_velocity(tr, args.assume_units):
+                tr.stats.units = "M/S"
+                keep.append(tr)
+        n_dropped = len(stream) - len(keep)
+        if n_dropped:
+            warn(f"{n_dropped}/{len(stream)} traces dropped "
+                 f"(unsupported units '{args.assume_units}')")
+        stream = keep
+        if len(stream) == 0:
+            fail(f"no usable traces for units '{args.assume_units}'")
+            return
 
     # ── 模拟 Wood-Anderson 地震仪 ──
     log("Simulating Wood-Anderson response...")
@@ -186,9 +214,6 @@ def main() -> None:
                         "gain": WA_GAIN,
                         "sensitivity": WA_SENSITIVITY,
                     })
-    # simulate 后仍是位移量，保留单位标记
-    for tr in stream:
-        tr.stats.units = "M"
 
     # ── 按事件计算震级 ──
     from obspy import UTCDateTime
@@ -201,6 +226,10 @@ def main() -> None:
         log(f"Station list: {len(stas)} stations, columns={list(stas.columns)}, sample_stations={stas['station'].head(5).tolist()}")
     else:
         warn("No station CSV loaded — epicentral distances will use default 10 km!")
+
+    sta_codes = None
+    if stas is not None:
+        sta_codes = stas.apply(_station_code, axis=1).astype(str)
 
     n_matched = 0
     n_unmatched = 0
@@ -228,10 +257,8 @@ def main() -> None:
             # 这里先用一个较宽松的窗口，后续可替换为精确走时表
             r_epi_km = 10.0
             matched = False
-            if stas is not None:
-                sta_col_str = stas["station"].astype(str)
-                split_last = sta_col_str.str.split(".").str[-1]
-                match_mask = split_last == sta_name
+            if sta_codes is not None:
+                match_mask = sta_codes == sta_name
                 match_count = int(match_mask.sum())
 
                 if match_count > 0:
@@ -276,23 +303,22 @@ def main() -> None:
             if len(windowed.data) == 0:
                 continue
 
-            # 检查单位并获取振幅（微米）
-            amp_um = _check_and_convert_to_displacement_um(
-                windowed, assume_units=args.assume_units)
-            if amp_um is None:
+            # WA 零到峰位移振幅（毫米）
+            amp_mm = _wa_amplitude_mm(windowed)
+            if amp_mm <= 0.0:
                 continue
 
-            # 使用震源距（Hutton-Boore 公式要求）
+            # 标定式使用震源距
             hypocentral_km = r_hyp_km
 
-            ml = _hutton_boore_ml(amp_um, hypocentral_km)
+            ml = _ml_from_wa_amplitude(amp_mm, hypocentral_km)
             ml_values.append(ml)
             diag.append({
                 "event_id": ev["event_id"],
                 "trace_id": tr.id,
                 "epicentral_km": round(r_epi_km, 2),
                 "hypocentral_km": round(hypocentral_km, 2),
-                "amplitude_um": round(amp_um, 4),
+                "amplitude_mm": round(amp_mm, 8),
                 "single_ml": round(ml, 2),
             })
 
@@ -332,21 +358,22 @@ def main() -> None:
     log("===========================")
 
     # ── 合并结果并输出 ──
+    # 本阶段是震级的唯一权威来源：上游 catalog 若已带 magnitude / magnitude_type
+    # （例如 fetch_templeton.py 写入的公开目录），必须被本阶段结果覆盖，而不是
+    # 反过来用 combine_first 保留上游值——否则对外看到的还是旧震级，
+    # 且 magnitude_type 会因为 "_new" 列被删除而变成空值。
     mag_df = pd.DataFrame(mags)
-    out = catalog.merge(
-        mag_df,
-        on="event_id", how="left", suffixes=("", "_new"),
-    )
-    if "magnitude_new" in out.columns:
-        out["magnitude"] = out["magnitude_new"].combine_first(out["magnitude"])
-        out.drop(columns=[c for c in out.columns if c.endswith("_new")],
-                 inplace=True)
+    out = catalog.drop(
+        columns=[c for c in ("magnitude", "magnitude_type")
+                 if c in catalog.columns])
+    out = out.merge(mag_df, on="event_id", how="left")
 
     out_path = Path(args.output)
     ensure_dir(out_path.parent)
     out.to_csv(out_path, index=False)
 
     # 输出诊断表，便于排查震级异常
+    diag_path = None
     if diag:
         diag_path = out_path.with_suffix(".magnitude_diag.csv")
         pd.DataFrame(diag).to_csv(diag_path, index=False)
@@ -362,8 +389,11 @@ def main() -> None:
         "median_magnitude": float(
             out["magnitude"].dropna().astype(float).median()
         ) if n_with_mag else None,
+        "ml_relation": "Bakun & Joyner (1984)",
+        "input_units": args.assume_units,
+        "response_removed_here": args.assume_units.upper() == "COUNTS",
         "catalog_file": str(out_path),
-        "diagnostics_file": str(diag_path) if diag else None,
+        "diagnostics_file": str(diag_path) if diag_path else None,
     })
 
 

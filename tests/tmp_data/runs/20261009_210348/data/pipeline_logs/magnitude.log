@@ -1,0 +1,937 @@
+{
+  "status": "ok",
+  "magnitude_available": true,
+  "n_events": 14,
+  "n_events_with_magnitude": 14,
+  "median_magnitude": -0.82,
+  "catalog_file": "data\\locate\\catalog_final.csv",
+  "diagnostics_file": "data\\locate\\catalog_final.magnitude_diag.csv"
+}
+
+---STDERR---
+[INFO] Loaded station list from data/stations/stations.csv (5 stations)
+[INFO] Loading waveforms...
+[INFO] Assuming waveforms are already in physical units (p02 remove_response); skipping repeated response removal
+[INFO] Simulating Wood-Anderson response...
+[INFO] Total traces loaded: 90
+[INFO] Station list: 5 stations, columns=['station', 'network', 'station_code', 'latitude', 'longitude', 'elevation_m'], sample_stations=['AK.CCB.', 'AK.HDA.', 'AK.PS08.', 'AK.WRH.', 'IU.COLA.']
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000001 @ (64.4284, -146.8180), depth=15.0 km
+[WARN]   Event [ev000001] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]    stations.csv sample stations: ['AK.CCB.', 'AK.HDA.', 'AK.PS08.', 'AK.WRH.', 'IU.COLA.']
+[WARN]   Event [ev000001] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]    stations.csv sample stations: ['AK.CCB.', 'AK.HDA.', 'AK.PS08.', 'AK.WRH.', 'IU.COLA.']
+[WARN]   Event [ev000001] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]    stations.csv sample stations: ['AK.CCB.', 'AK.HDA.', 'AK.PS08.', 'AK.WRH.', 'IU.COLA.']
+[WARN]   Event [ev000001] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000001] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=2.21 (from 10 stations, raw range=[1.97, 2.61])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000002 @ (64.7518, -147.4725), depth=0.0 km
+[WARN]   Event [ev000002] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000002] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=-0.06 (from 6 stations, raw range=[-0.28, 1.48])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000003 @ (64.7559, -147.4222), depth=0.0 km
+[WARN]   Event [ev000003] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000003] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=-0.88 (from 10 stations, raw range=[-1.19, -0.47])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000004 @ (64.8476, -147.4240), depth=0.0 km
+[WARN]   Event [ev000004] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000004] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=0.10 (from 3 stations, raw range=[-0.46, 1.42])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000005 @ (64.3707, -146.8799), depth=0.0 km
+[WARN]   Event [ev000005] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000005] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=-2.27 (from 6 stations, raw range=[-2.36, -0.90])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000006 @ (64.4797, -146.9085), depth=0.0 km
+[WARN]   Event [ev000006] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000006] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=-0.90 (from 6 stations, raw range=[-1.00, 0.27])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000007 @ (63.9840, -146.5289), depth=25.0 km
+[WARN]   Event [ev000007] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000007] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=-0.47 (from 3 stations, raw range=[-1.56, 0.89])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000008 @ (64.6531, -147.4474), depth=40.0 km
+[WARN]   Event [ev000008] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000008] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=0.07 (from 4 stations, raw range=[-0.47, 1.51])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000009 @ (64.9815, -147.4526), depth=15.0 km
+[WARN]   Event [ev000009] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000009] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=-1.49 (from 6 stations, raw range=[-1.61, -0.03])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000010 @ (64.6122, -147.0197), depth=0.0 km
+[WARN]   Event [ev000010] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000010] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=-1.90 (from 6 stations, raw range=[-2.21, -0.33])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000011 @ (64.9765, -147.4179), depth=15.0 km
+[WARN]   Event [ev000011] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000011] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=-1.60 (from 6 stations, raw range=[-1.91, -0.51])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000012 @ (64.5342, -146.9162), depth=0.0 km
+[WARN]   Event [ev000012] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000012] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=-0.82 (from 2 stations, raw range=[-2.06, 0.33])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000013 @ (64.5225, -146.9628), depth=0.0 km
+[WARN]   Event [ev000013] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000013] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=-0.82 (from 2 stations, raw range=[-2.06, 0.33])
+C:\Users\Admin\Desktop\Geophysics\seismic-workflow\scripts\p07_compute_magnitude.py:209: UserWarning: Discarding nonzero nanoseconds in conversion.
+  origin = UTCDateTime(ev_time.to_pydatetime())
+[INFO] 
+--- Event: ev000014 @ (64.3430, -146.5338), depth=0.0 km
+[WARN]   Event [ev000014] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.CCB.BHE] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.CCB.BHN] station 'CCB' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHE] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.HDA.BHN] station 'HDA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHE] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.PS08.BHN] station 'PS08' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHE] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [AK.WRH.BHN] station 'WRH' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH1] station 'COLA' NOT FOUND in station list!
+[WARN]   Event [ev000014] trace [IU.COLA.BH2] station 'COLA' NOT FOUND in station list!
+[INFO]   -> ML=-0.82 (from 2 stations, raw range=[-1.59, 0.33])
+[INFO] 
+=== Magnitude Calculation Summary ===
+[INFO]   Total trace-event pairs processed: 840
+[INFO]   Station matched: 0
+[INFO]   Station NOT matched: 840 (used default 10 km distance)
+[INFO] ===========================
+[INFO] Magnitude diagnostics written to data\locate\catalog_final.magnitude_diag.csv
