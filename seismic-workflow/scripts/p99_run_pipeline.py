@@ -15,7 +15,6 @@ import argparse
 import importlib.util
 import json
 import re
-import shutil
 import subprocess
 import sys
 import time
@@ -210,23 +209,14 @@ def main() -> None:
         "--output", f"{w}/assoc/events.csv"])
 
     if args.skip != "locate":
-        # Phase 5 — pluggable backend (see SKILL.md Phase 5)
-        if shutil.which("NLLoc") or shutil.which("nll"):
-            results["locate"] = run_step("locate", [
-                sys.executable, str(SCRIPTS / "p05_run_nll_locate.py"),
-                "--events", f"{w}/assoc/events.csv",
-                "--picks", f"{w}/picks/phasenet_picks.csv",
-                "--stations", stations_csv,
-                "--output-dir", f"{w}/locate/nll"])
-            final_catalog = f"{w}/locate/nll/catalog_abs.csv"
-        else:
-            results["locate"] = run_step("locate", [
-                sys.executable, str(SCRIPTS / "p05_grid_locate.py"),
-                "--events", f"{w}/assoc/events.csv",
-                "--picks", f"{w}/picks/phasenet_picks.csv",
-                "--stations", stations_csv,
-                "--output", f"{w}/locate/catalog_abs.csv"])
-            final_catalog = f"{w}/locate/catalog_abs.csv"
+        # Phase 5 — pure-Python Geiger location (see SKILL.md Phase 5)
+        results["locate"] = run_step("locate", [
+            sys.executable, str(SCRIPTS / "p05_grid_locate.py"),
+            "--events", f"{w}/assoc/events.csv",
+            "--picks", f"{w}/picks/phasenet_picks.csv",
+            "--stations", stations_csv,
+            "--output", f"{w}/locate/catalog_abs.csv"])
+        final_catalog = f"{w}/locate/catalog_abs.csv"
 
         # Phase 6 — optional (relocDD-py, installed from git at install time)
         relocdd_ok = _has_module("ph2dt") and _has_module("hypoDD")

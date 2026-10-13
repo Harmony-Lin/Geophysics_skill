@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """Phase 0: environment detection for the seismic workflow.
 
-Reports available packages, compiled-location binaries, and SeisBench
-model cache status as structured JSON on stdout.
+Reports available packages and SeisBench model cache status as structured
+JSON on stdout.
 """
 from __future__ import annotations
 
 import argparse
 import importlib.util
-import shutil
 import sys
 from pathlib import Path
 
@@ -59,11 +58,10 @@ def main() -> None:
         "numpy": _has_module("numpy"),
     }
 
-    log("Probing location backends (NLLoc / relocDD-py)...")
+    log("Probing location backends (relocDD-py)...")
     # relocDD-py is installed from git (packages/relocdd-py/install.py)
     relocdd_ok = _has_module("ph2dt") and _has_module("hypoDD")
     backends = {
-        "nll": shutil.which("NLLoc") is not None or shutil.which("nll") is not None,
         "hypodd": relocdd_ok,
     }
 

@@ -2,10 +2,10 @@
 name: seismic-workflow
 description: >
   天然地震完整处理工作流：波形下载、PhaseNet震相拾取、GaMMA关联、
-  NonLinLoc绝对定位、relocDD-py相对定位、目录质检与制图。
+  纯 Python Geiger 绝对定位、relocDD-py 相对定位、目录质检与制图。
   当用户需要处理地震波形数据、构建地震目录或进行精定位时使用。
 license: MIT
-compatibility: Python 3.11+, GMT 6（可选）, NonLinLoc（可选）, relocDD-py（纯 Python，安装阶段 git 安装，见 docs/install.md）
+compatibility: Python 3.11+, GMT 6（可选）, relocDD-py（纯 Python，安装阶段 git 安装，见 docs/install.md）
 metadata:
   version: 1.0.0
   domain: seismology
@@ -35,8 +35,8 @@ data/
 - 每个脚本调用后：读取 stdout JSON 的 `status` 字段。
   - `"ok"` → 继续下一阶段；
   - 非 `"ok"` → 按"错误处理"小节执行，禁止自行编造参数重试超过 1 次。
-- 环境探测：首次进入工作流前运行 `python scripts/detect_env.py`,
-  根据返回的 `backends` 决定 P5/P6 使用哪个定位后端（见 Phase 5）。
+- 环境探测：首次进入工作流前运行 `python scripts/p00_detect_env.py`，
+  根据返回的 `backends` 决定 P6 是否执行（见 Phase 6）。
 
 ---
 
@@ -48,7 +48,6 @@ python scripts/p00_detect_env.py
 
 记录 stdout JSON 中：
 
-- `backends.nll`：是否存在编译型 NonLinLoc 定位程序二进制
 - `backends.hypodd`：是否已安装 relocDD-py（纯 Python 双差定位，安装阶段 git 安装）
 - `packages.pygmt`：是否可用 PyGMT（否则制图回退 Cartopy+Matplotlib）
 - `seisbench_cache`：PhaseNet 权重是否已缓存
@@ -348,26 +347,7 @@ python scripts/p04_run_association.py \
 
 ---
 
-## Phase 5: 绝对定位（可插拔后端）
-
-先用 Phase 0 的 `backends.nll` 决定后端：
-
-### 后端 A：NonLinLoc（存在 NLLoc 二进制时，生产环境首选）
-
-```bash
-python scripts/p05_run_nll_locate.py \
-  --events data/assoc/events.csv \
-  --picks data/picks/phasenet_picks.csv \
-  --stations data/stations/stations.csv \
-  --velocity-model assets/iasp91.tvel \
-  --control-template assets/nll_control_template.conf \
-  --output-dir data/locate/nll
-```
-
-包装器负责生成 NLL 控制文件、调用二进制、解析 `.hyp` 输出为 CSV+JSON。
-你不需要了解 NLL 控制文件语法；需要调参时阅读 `references/nll_input_format.md`。
-
-### 后端 B：纯 Python Geiger 迭代定位（无 NLLoc 二进制时的回退）
+## Phase 5: 绝对定位（纯 Python Geiger 迭代）
 
 ```bash
 python scripts/p05_grid_locate.py \
@@ -385,12 +365,12 @@ python scripts/p05_grid_locate.py \
 （深度, 震中距）网格插值，并缓存到 `seismic-workflow/.cache/`。
 已知局限：一维速度模型、无 PDF 不确定度输出，深度误差约 2–5 km。
 
-**成功判据**（两后端相同）：`status=="ok"` 且 `n_located >= 0.5 * n_events_input`。
+**成功判据**：`status=="ok"` 且 `n_located >= 0.5 * n_events_input`。
 
 **错误处理**：定位成功率 <50% 时，检查拾取质量（Phase 3 的 `n_picks` 是否异常少）,
 或询问用户是否提供更合适的近台速度模型（`references/velocity_model_guide.md`）。
 
-**检查点 5**：确认 `data/locate/` 下产出目录文件（catalog_abs.csv 或 *.hyp 对应的 CSV）非空后才进入 Phase 6。
+**检查点 5**：确认 `data/locate/catalog_abs.csv` 非空后才进入 Phase 6。
 
 ---
 
@@ -538,6 +518,5 @@ python scripts/p99_run_pipeline.py \
 ## 参考文档（按需阅读，勿一次性全读）
 
 - 速度模型选择困难时 → `references/velocity_model_guide.md`
-- 需要调整 NonLinLoc 参数时 → `references/nll_input_format.md`
 - relocDD-py 相对定位效果不佳时 → `references/hypodd_workflow.md`
 - 任何脚本报错时 → 先查 `references/troubleshooting.md` 再决定重试策略

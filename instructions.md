@@ -2,7 +2,7 @@
 
 ## 摘要
 
-天然地震数据处理工作流涉及数据获取、震相拾取、事件关联、绝对/相对定位、震源机制反演及活动性分析等多个环节，传统上依赖研究者手动串联多种异构软件（Python 库、Fortran/C 命令行程序、Java 工具等），存在操作门槛高、流程不可复现、知识传承困难等问题。本文提出一种基于 **Agent Skills 开放标准**的天然地震数据处理自动化框架，将领域专家知识编码为结构化的技能文件（SKILL.md + 脚本 + 参考文档），使大语言模型（LLM）能够作为"智能操作员"自主执行完整的地震学工作流。框架设计了渐进式披露的文件结构、确定性的脚本封装层、以及面向离线部署的分层容器化架构，支持在国产大模型（Qwen3-Coder）上完全离线运行，满足数据安全要求。本文详细阐述了工具选型依据、Skill 文件规范、容器化开发策略及离线部署方案，为该框架的工程实现提供完整技术蓝图。
+天然地震数据处理工作流涉及数据获取、震相拾取、事件关联、绝对/相对定位、震源机制反演及活动性分析等多个环节，传统上依赖研究者手动串联多种异构软件（Python 库、Fortran/C 命令行程序、Java 工具等），存在操作门槛高、流程不可复现、知识传承困难等问题。本文提出一种基于 **Agent Skills 开放标准**的天然地震数据处理自动化框架，将领域专家知识编码为结构化的技能文件（SKILL.md + 脚本 + 参考文档），使大语言模型（LLM）能够作为"智能操作员"自主执行完整的地震学工作流。框架设计了渐进式披露的文件结构、确定性的脚本封装层，以及面向离线部署的分层架构（纯 Python 运行时 + 本地推理引擎 + Agent 壳子），全流程定位与制图不依赖任何编译型软件，可在 Windows/Linux/macOS 上一致运行，支持在国产大模型（Qwen3-Coder）上完全离线运行，满足数据安全要求。本文详细阐述了工具选型依据、Skill 文件规范、开发调试策略及离线部署方案，为该框架的工程实现提供完整技术蓝图。
 
 ---
 
@@ -18,6 +18,8 @@
 - **自写分析脚本**：完整性震级估计、Omori 衰减拟合、b 值计算
 
 这些工具之间的数据传递依赖特定文本格式（如 HypoDD 的 phase.inp、NLL 的控制文件），格式转换逻辑散落在研究者的个人笔记或实验室内部文档中。当人员流动时，这些隐性知识随之丢失，导致新成员上手周期长达数月。
+
+**本框架的应对**：把上述格式转换逻辑全部脚本化、显式化；同时凡有纯 Python 等价实现的环节（走时计算、绝对定位、双差定位）一律改用纯 Python 实现，消除编译工具链这一最大的部署障碍（详见第 7 节）。
 
 ### 1.2 现有方案的不足
 
@@ -47,8 +49,8 @@ Phase 1: 数据获取        → FDSN 波形下载、台站元数据、已有目
 Phase 2: 数据预处理      → 去仪器响应、滤波、重采样、分量旋转
 Phase 3: 事件检测与拾取  → STA/LTA 触发 或 PhaseNet 深度学习拾取
 Phase 4: 震相关联        → GaMMA 高斯混合关联 或 REAL 叠加关联
-Phase 5: 绝对定位        → NonLinLoc 网格搜索 或 HYPOINVERSE
-Phase 6: 相对定位        → HypoDD 双差精修（ph2dt 互相关 + hypoDD 反演）
+Phase 5: 绝对定位        → obspy.taup 走时 + Geiger 迭代（纯 Python）
+Phase 6: 相对定位        → relocDD-py 双差定位（纯 Python：ph2dt + hypoDD）
 Phase 7: 震级计算        → ML 近震震级（Wood-Anderson 仿真 + Bakun & Joyner 1984）
 Phase 8: 质检与制图      → 残差分析、G-R 关系、震中分布图、剖面图
 ```
@@ -59,31 +61,34 @@ v2 扩展阶段预留：VELEST 速度模型反演、CAP/HASH 震源机制、PyCS
 
 1. **全开源**：排除 Antelope、SeisUnix 等商业软件
 2. **纯命令行/脚本接口**：排除所有 GUI 软件，确保 LLM 可调用
-3. **Linux 原生**：与容器化部署环境一致
+3. **跨平台原生**：Windows/Linux/macOS 均可直接运行，无编译型依赖
 4. **社区活跃**：优先选择有持续维护、文档完善的工具
-5. **确定性封装**：Fortran/C 程序必须通过包装脚本隔离，LLM 不直接接触其输入格式
+5. **确定性封装**：第三方工具（relocDD-py 等）必须通过包装脚本隔离，LLM 不直接接触其原生输入格式
+6. **纯 Python 优先**：同一环节存在成熟的纯 Python 等价实现时，优先采用，避免 gfortran/Java 工具链
 
 ### 2.3 v1 核心工具栈
 
-| 阶段                 | 工具                 | 类型             | 选型理由                                                     |
-| -------------------- | -------------------- | ---------------- | ------------------------------------------------------------ |
-| 数据获取/预处理/震级 | ObsPy                | Python 库        | 一个库覆盖 80% 数据层面需求；FDSN 客户端支持全球主要数据中心 |
-| 震相拾取             | SeisBench + PhaseNet | Python (PyTorch) | SeisBench 统一多模型接口；PhaseNet 为业界事实标准            |
-| 震相关联             | GaMMA                | Python           | 高斯混合模型，速度快、无需网格搜索，当前建目录主流选择       |
-| 绝对定位             | NonLinLoc            | C 命令行         | 开源、文档全、配置文件驱动，适合脚本化封装                   |
-| 相对定位             | HypoDD + ph2dt       | Fortran 命令行   | 引用率极高的经典程序；双差法可将定位误差降至 0.1 s           |
-| 理论走时             | TauP                 | Java 命令行      | IASP91/AK135 等全球模型走时计算标准工具                      |
-| 制图                 | PyGMT + Cartopy      | Python           | PyGMT 出版级地图 + GMT 沙滩球；Cartopy 交互式探索互补        |
-| 活动性分析           | PyCSEP + 自写脚本    | Python           | CSEP 官方库 + scipy 自定义分析                               |
+| 阶段                 | 工具                      | 类型             | 选型理由                                                     |
+| -------------------- | ------------------------- | ---------------- | ------------------------------------------------------------ |
+| 数据获取/预处理/震级 | ObsPy                     | Python 库        | 一个库覆盖 80% 数据层面需求；FDSN 客户端支持全球主要数据中心 |
+| 震相拾取             | SeisBench + PhaseNet      | Python (PyTorch) | SeisBench 统一多模型接口；PhaseNet 为业界事实标准            |
+| 震相关联             | GaMMA                     | Python           | 高斯混合模型，速度快、无需网格搜索，当前建目录主流选择       |
+| 理论走时             | obspy.taup                | Python           | TauP 的纯 Python 移植，内置 IASP91/AK135，消除 Java 依赖     |
+| 绝对定位             | Geiger 迭代（自研脚本）   | Python           | `obspy.taup` 走时 + 阻尼加权最小二乘 + Tukey 抗差，无需 C 编译 |
+| 相对定位             | relocDD-py                | Python           | HypoDD 的纯 Python 移植（ph2dt + hypoDD），无需 Fortran 编译 |
+| 制图                 | PyGMT + Cartopy           | Python           | PyGMT 出版级地图 + GMT 沙滩球；Cartopy 交互式探索互补        |
+| 活动性分析           | PyCSEP + 自写脚本         | Python           | CSEP 官方库 + scipy 自定义分析                               |
 
 ### 2.4 明确排除的工具
 
-| 工具              | 排除原因                                          |
-| ----------------- | ------------------------------------------------- |
-| SeisComP 完整系统 | 服务器级实时监测系统，部署维护成本超出 Skill 范畴 |
-| Earthworm         | 老牌实时系统，非主流                              |
-| SPECFEM3D / SW4   | 超算级数值模拟，超出单机 Skill 能力边界           |
-| 各类 GUI 解释软件 | 不符合纯命令行约束                                |
+| 工具                            | 排除原因                                                     |
+| ------------------------------- | ------------------------------------------------------------ |
+| NonLinLoc / HypoDD（原版二进制）| 需 gfortran/gcc 编译、版本敏感；功能已由纯 Python 实现覆盖   |
+| TauP（Java 版）                 | 需 Java JRE；`obspy.taup` 为等价纯 Python 移植               |
+| SeisComP 完整系统               | 服务器级实时监测系统，部署维护成本超出 Skill 范畴            |
+| Earthworm                       | 老牌实时系统，非主流                                         |
+| SPECFEM3D / SW4                 | 超算级数值模拟，超出单机 Skill 能力边界                      |
+| 各类 GUI 解释软件               | 不符合纯命令行约束                                           |
 
 ---
 
@@ -107,23 +112,31 @@ Skill 的物理形态是一个文件夹，遵循渐进式披露（Progressive Di
 seismic-workflow/
 ├── SKILL.md                        # 技能定义（唯一必需文件）
 ├── scripts/                        # 可执行脚本（Agent 调用，不读入上下文）
-│   ├── fetch_waveforms.py          # Phase 1: 数据下载
-│   ├── preprocess.py               # Phase 2: 预处理
-│   ├── pick_phases.py              # Phase 3: 震相拾取
-│   ├── run_association.py          # Phase 4: 关联
-│   ├── run_nll_locate.sh           # Phase 5: NLL 绝对定位包装器
-│   ├── run_hypodd.sh               # Phase 6: HypoDD 相对定位包装器
-│   ├── compute_magnitude.py        # Phase 7: 震级计算
-│   └── qc_and_plot.py              # Phase 8: 质检与制图
+│   ├── common.py                   # 公共库（JSON 契约、日志、拾取/台站读取、计时器）
+│   ├── p00_detect_env.py           # Phase 0: 环境探测（packages / backends）
+│   ├── p01_resolve_event.py        # Phase 1: 事件参数解析（文本 → 时间窗）
+│   ├── p01_fetch_waveforms.py      # Phase 1: 数据下载（FDSN 或本地目录）
+│   ├── p02_preprocess.py           # Phase 2: 去响应、滤波、重采样、分量旋转
+│   ├── p03_pick_phases.py          # Phase 3: PhaseNet 震相拾取
+│   ├── p04_run_association.py      # Phase 4: GaMMA 关联（事件表 + 拾取归属）
+│   ├── p05_grid_locate.py          # Phase 5: 绝对定位（taup 走时 + Geiger 迭代）
+│   ├── p06_run_hypodd.py           # Phase 6: 相对定位（relocDD-py 包装器）
+│   ├── p07_compute_magnitude.py    # Phase 7: ML 震级计算
+│   ├── p08_qc_and_plot.py          # Phase 8: 质检与制图
+│   └── p99_run_pipeline.py         # P2–P8 一键流水线（含检查点校验与计时）
+├── packages/                       # 第三方包安装脚本（上游缺打包文件时补 pyproject.toml）
+│   └── relocdd-py/
+│       ├── install.py              # git clone + 补 pyproject.toml + pip install -e
+│       └── pyproject.toml
 ├── references/                     # 深度参考文档（Agent 按需阅读）
 │   ├── velocity_model_guide.md     # 速度模型选择指南
-│   ├── nll_input_format.md         # NLL 控制文件参数详解
-│   ├── hypodd_workflow.md          # HypoDD 完整操作流程
+│   ├── hypodd_workflow.md          # relocDD-py 双差定位完整操作流程
 │   └── troubleshooting.md          # 常见报错排查手册
 ├── assets/                         # 模板与静态资源
-│   ├── nll_control_template.conf   # NLL 控制文件模板
-│   ├── hypodd_inp_template.txt     # HypoDD 输入文件模板
-│   ├── iasp91.tvel                 # IASP91 速度模型
+│   ├── gamma_config.json           # GaMMA 关联参数
+│   ├── iasp91.tvel                 # IASP91 速度模型（P5 走时/深度）
+│   ├── relocdd_ph2dt_inp_template.txt   # ph2dt 控制文件模板
+│   ├── relocdd_hypodd_inp_template.txt  # hypoDD 控制文件模板
 │   └── report_template.md          # 处理报告模板
 └── LICENSE.txt
 ```
@@ -137,12 +150,11 @@ seismic-workflow/
 name: seismic-workflow
 description: >
   天然地震完整处理工作流：波形下载、PhaseNet震相拾取、GaMMA关联、
-  NonLinLoc绝对定位、HypoDD相对定位、目录质检与制图。
+  纯 Python Geiger 绝对定位、relocDD-py 相对定位、目录质检与制图。
   当用户需要处理地震波形数据、构建地震目录或进行精定位时使用。
 license: MIT
-compatibility: Python 3.11+, GMT 6, NonLinLoc, HypoDD, Java 11+
+compatibility: Python 3.11+, GMT 6（可选）, relocDD-py（纯 Python，安装阶段 git 安装，见 docs/install.md）
 metadata:
-  author: [作者姓名]
   version: 1.0.0
   domain: seismology
 ---
@@ -170,21 +182,24 @@ metadata:
 3. **有意义的退出码**：0 = 成功，非 0 = 失败 + 明确错误信息
 4. **argparse/click 参数解析**：自带 `--help`，Agent 可探测用法
 5. **零交互**：不等待键盘输入、不弹确认框
-6. **Fortran/C 程序的包装器模式**：脚本负责"JSON 配置 → 生成原生输入文件 → 运行二进制 → 解析输出 → 转 JSON"，LLM 永远不直接接触 HypoDD/NLL 的古老格式
+6. **第三方程序的包装器模式**：脚本负责"JSON 配置 → 生成原生输入文件 → 调用第三方实现 → 解析输出 → 转 JSON"，LLM 永远不直接接触 relocDD-py 的 `phase.dat` / `hypoDD.inp` 等原生格式（P6）。
 7. **耗时可见**：脚本总耗时由 `common.run_main` 打到 stderr（`脚本耗时: ...`），`emit` 的 JSON 里带 `elapsed_s`；多步骤脚本用 `common.StepTimer` 逐步计时（`with timer.step("...")` + `timer.log_summary()`），循环内重复的小步骤用 `common.CumulativeTimer` 按名字累加（条目多一个 `count`），一键流水线另外把各阶段耗时写入 `data/pipeline_logs/timings.json` 并追加到 `<阶段>.log` 的 `---ELAPSED---` 段；阶段自报的 `timings` 会随该阶段进入 `timings.json`，P8 汇总进 QC 报告时按阶段展开成"内部步骤"明细
 
 示例接口契约：
 
 ```bash
 # 输入
-python scripts/pick_phases.py --input data/raw/ --model phasenet --gpu
+python scripts/p03_pick_phases.py --input data/preprocessed \
+  --model phasenet --output data/picks/phasenet_picks.csv
 
 # stdout（Agent 解析）
-{"status": "ok", "picks_file": "data/picks/phasenet_picks.csv", "n_events": 342, "n_picks": 4891}
+{"status": "ok", "model": "phasenet", "device": "cuda", "n_files": 11,
+ "n_traces": 33, "n_picks": 137, "n_p_picks": 79, "n_s_picks": 58,
+ "picks_file": "data/picks/phasenet_picks.csv"}
 
 # stderr（人类可读日志）
 [INFO] Loading PhaseNet model from cache...
-[INFO] Processing 120 stations, batch size 32...
+[INFO] Processing 11 files, batch size 32...
 [INFO] Completed in 4m 23s
 ```
 
@@ -249,133 +264,81 @@ vllm serve ./models/Qwen3-Coder-30B-A3B-Instruct-FP8 \
 
 ---
 
-## 5. 容器化开发与部署策略
+## 5. 开发与调试策略
 
-### 5.1 Docker 解决的五个痛点
+### 5.1 不需要容器的三个理由
 
-| 痛点         | 表现                               | Docker 解决方案                         |
-| ------------ | ---------------------------------- | --------------------------------------- |
-| 编译型软件   | HypoDD/NLLoc 需 gfortran，版本敏感 | 编译过程固化在镜像中                    |
-| 原生科学库   | GMT 依赖 PROJ/GDAL/netCDF          | 系统包 + pip 统一装入                   |
-| 静态数据依赖 | SeisBench 权重、走时表             | 打包或 volume 挂载                      |
-| GPU/CUDA     | vLLM 需 NVIDIA 驱动                | nvidia-container-toolkit 共享宿主机驱动 |
-| 可交付性     | 离线交付到其他单位                 | 单个 tar 文件 = 完整环境                |
+| 传统痛点     | 表现                                       | 本框架的做法                                                   |
+| ------------ | ------------------------------------------ | -------------------------------------------------------------- |
+| 编译型软件   | HypoDD/NLLoc 需 gfortran，版本敏感         | **不使用**：P5 为 `obspy.taup` + Geiger 迭代，P6 为 relocDD-py |
+| 原生科学库   | GMT 依赖 PROJ/GDAL/netCDF                  | **可选**：PyGMT 缺失时 P8 自动回退 Cartopy + Matplotlib        |
+| 静态数据依赖 | SeisBench 权重、走时表缓存                 | 缓存到 `~/.cache/seisbench/`、`seismic-workflow/.cache/`，拷贝即迁移 |
+
+运行时依赖只剩下 pip 包加两个缓存目录，**因此不再需要容器来保证可复现性**：
+同一套 Skill 在 Windows / Linux / macOS 上安装步骤完全一致（见 `docs/install.md`）。
 
 ### 5.2 核心原则：稳定层与变动层分离
 
 ```
-稳定（很少改）                      频繁变动（天天改）
-──────────────                      ────────────────
-• 系统库（GMT, Java, gfortran）      • SKILL.md
-• 编译好的二进制（HypoDD, NLLoc）    • scripts/*.py
-• pip 包（obspy, seisbench, torch）  • references/*.md
-• 模型权重（30GB）                   • 调试数据
-• vLLM                               • 配置参数
-        ↓                                    ↓
-   镜像底层（极少 rebuild）             Bind Mount / Volume
-                                      （秒级生效）
+稳定（装一次）                        频繁变动（天天改）
+──────────────                        ────────────────
+• pip 包（obspy, seisbench, torch）    • SKILL.md
+• relocDD-py（install.py 装一次）      • scripts/*.py
+• SeisBench 权重（~/.cache/seisbench） • references/*.md
+• 走时表缓存（.cache/iasp91_tt_table） • 调试数据 / 配置参数
+• vLLM 与模型权重                      • data/ 下的一切产物
+        ↓                                      ↓
+   venv / conda 环境（装一次）          直接编辑，无需重建
 ```
 
-### 5.3 五种开发手法
+改 `scripts/` 或 `SKILL.md` 不需要重装任何依赖——这是把环境固化到容器里才能解决的问题
+在纯 Python 方案下的自然消解；只有 pip 依赖或 `packages/relocdd-py` 变更时才需重新安装。
 
-#### 手法 1：Bind Mount 挂载 Skill 目录
+### 5.3 四种开发手法
 
-日常开发 90% 的场景。Skill 源码在宿主机编辑，容器内实时生效：
+#### 手法 1：Skill 目录就地运行
+
+Skill 源码与数据目录同处项目根，脚本内部一律使用相对路径，Agent 的 cwd 即项目根，
+无需挂载、无需拷贝：
 
 ```bash
-docker run -it --rm \
-  -v $(pwd)/seismic-workflow:/workspace/.opencode/skills/seismic-workflow \
-  -v $(pwd)/data:/workspace/data \
-  -v ~/.cache/seisbench:/root/.cache/seisbench \
-  --gpus all \
-  seismic-skill:dev bash
+python seismic-workflow/scripts/p99_run_pipeline.py \
+  --input data/raw --workdir data --stations-dir data/stations
 ```
 
-#### 手法 2：多阶段构建隔离编译环境
+#### 手法 2：用一键流水线替代 LLM 编排
 
-编译时需要 gfortran/gcc/make，运行时完全不需要：
+调试阶段不要经由 Agent：`p99_run_pipeline.py` 串接 P2–P8 并在每阶段校验检查点，
+任一阶段失败即停并输出已完成阶段的 JSON 摘要，比多轮 LLM 调用更快、更可复现。
+脚本链本身跑通后，再交给 Agent 处理需要判断的环节（数据来源、参数取舍、异常分支）。
 
-```dockerfile
-FROM ubuntu:22.04 AS builder
-RUN apt-get update && apt-get install -y gfortran gcc make wget
-WORKDIR /build
-RUN wget -q https://.../HYPODD_20040930.tar.gz \
- && tar xzf HYPODD_20040930.tar.gz \
- && cd HYPODD/src && make hypoDD ph2dt
-
-FROM python:3.11-slim
-COPY --from=builder /build/HYPODD/src/hypoDD /usr/local/bin/
-COPY --from=builder /build/HYPODD/src/ph2dt /usr/local/bin/
-# 最终镜像不含编译器，体积小数百 MB
-```
-
-#### 手法 3：分层缓存优化 rebuild 速度
-
-```dockerfile
-# 先装依赖（稳定层，被缓存）
-COPY requirements.txt /tmp/
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
-# 后拷代码（变动层，仅此行重建）
-COPY . /workspace
-```
-
-改一行 Python 脚本的 rebuild 从 20 分钟降至数秒。
-
-#### 手法 4：Volume 持久化大文件
-
-地震数据和模型权重绝不 COPY 进镜像：
+#### 手法 3：venv 固化依赖
 
 ```bash
-docker volume create seisbench-weights
-docker volume create seismic-data
+python -m venv .venv
+.venv\Scripts\activate          # Windows（Linux/macOS: source .venv/bin/activate）
+pip install -r requirements.txt
+python seismic-workflow/packages/relocdd-py/install.py
 ```
 
-#### 手法 5：Docker Compose 一键编排
+新机器上重复这三条即可。`requirements.txt` 是依赖的唯一事实来源，
+需要离线交付时用 `pip download -r requirements.txt` 预取 wheel。
 
-```yaml
-services:
-  vllm:
-    image: vllm/vllm-openai:latest
-    deploy:
-      resources:
-        reservations:
-          devices: [{driver: nvidia, count: all, capabilities: [gpu]}]
-    volumes: ["./models:/models", "vllm-cache:/root/.cache"]
-    command: >
-      --model /models/Qwen3-Coder-30B-A3B-Instruct-FP8
-      --served-model-name qwen3-coder
-      --max-model-len 32768
-      --enable-auto-tool-choice
-      --tool-call-parser hermes
-    ports: ["8000:8000"]
+#### 手法 4：大文件与缓存不入库
 
-  agent:
-    build: .
-    depends_on: [vllm]
-    environment:
-      OPENAI_API_BASE: http://vllm:8000/v1
-      OPENAI_API_KEY: local
-    volumes:
-      - ./seismic-workflow:/workspace/.opencode/skills/seismic-workflow
-      - ./data:/workspace/data
-      - seisbench-cache:/root/.cache/seisbench
-    stdin_open: true
-    tty: true
-
-volumes:
-  vllm-cache:
-  seisbench-cache:
-```
+波形、SeisBench 权重、走时表缓存都落在 gitignore 覆盖的目录
+（`data/`、`~/.cache/seisbench/`、`seismic-workflow/.cache/`、`tests/tmp_data/`），
+仓库保持轻量；离线交付时单独拷贝缓存目录即可。
 
 ### 5.4 推荐的开发节奏
 
-| 步骤               | 环境                 | 目的                     |
-| ------------------ | -------------------- | ------------------------ |
-| 编写/修改脚本      | 宿主机 IDE           | 利用完整编辑器体验       |
-| 测试脚本链         | 容器内手动执行       | 不依赖 LLM，验证数据流通 |
-| 编写/修改 SKILL.md | 宿主机 IDE           | 迭代指令表述             |
-| 测试 Agent 调用    | 容器内跑 Agent       | 验证 LLM 能否正确调度    |
-| 交付部署           | docker compose up -d | 一条命令起完整离线系统   |
+| 步骤               | 环境                          | 目的                     |
+| ------------------ | ----------------------------- | ------------------------ |
+| 编写/修改脚本      | 宿主机 IDE                    | 利用完整编辑器体验       |
+| 测试脚本链         | 宿主机 venv 内手动执行 p99    | 不依赖 LLM，验证数据流通 |
+| 编写/修改 SKILL.md | 宿主机 IDE                    | 迭代指令表述             |
+| 测试 Agent 调用    | 宿主机跑 Agent（指向本地端点）| 验证 LLM 能否正确调度    |
+| 交付部署           | 拷贝 Skill 目录 + 缓存 + 权重 | 无需重建环境             |
 
 ---
 
@@ -392,10 +355,10 @@ volumes:
 
 ```
 【系统层】
-  □ NVIDIA 驱动 ≥535 + nvidia-container-toolkit
-  □ gcc / gfortran / make（编译 HypoDD/NLLoc，仅构建阶段需要）
-  □ Java JRE ≥11（TauP 运行时）
+  □ NVIDIA 驱动 ≥535（仅 GPU 推理需要；裸机部署直接使用宿主驱动）
   □ Git, tmux
+  ※ 不需要 gcc/gfortran/make，也不需要 Java JRE：
+    P5 用 obspy.taup、P6 用 relocDD-py，两者均为纯 Python
 
 【模型服务层】
   □ Python 3.11
@@ -406,15 +369,14 @@ volumes:
   □ OpenCode 二进制（单文件，拷入即用）
 
 【地球物理运行时】
-  □ Miniforge + 专用 conda 环境
+  □ Miniforge + 专用 conda 环境（或 venv）
       □ obspy ≥1.4
-      □ torch（CUDA 版）
+      □ torch（CUDA 版，GPU 推理）
       □ seisbench + 预下载权重 ★
-      □ pygmt（conda-forge）
-      □ cartopy, pandas, pyproj
-  □ 编译产物：hypoDD, ph2dt, NLLoc
-  □ TauP jar
-  □ 速度模型/走时表（assets/）
+      □ pygmt（conda-forge，可选；缺失回退 Cartopy）
+      □ cartopy, pandas, pyproj, scipy, numpy
+      □ relocDD-py（packages/relocdd-py/install.py，P6 必需）
+  □ 速度模型/走时表（assets/iasp91.tvel；走时表缓存自动生成）
 ```
 
 ### 6.3 易遗漏项预警
@@ -422,34 +384,35 @@ volumes:
 | 项目                     | 遗漏后果               | 预防措施                                      |
 | ------------------------ | ---------------------- | --------------------------------------------- |
 | SeisBench 预训练权重     | 离线首次拾取报下载错误 | 有网环境预跑一次，拷贝`~/.cache/seisbench/` |
-| HypoDD Fortran 编译      | 定位脚本报二进制不存在 | 多阶段构建固化编译过程                        |
+| relocDD-py 未安装        | P6 被自动跳过，只交付绝对定位目录 | 安装阶段执行 `packages/relocdd-py/install.py`（见 docs/install.md） |
 | vLLM tool-call-parser    | 模型能聊天但不调用工具 | 启动命令必带`--tool-call-parser hermes`     |
-| nvidia-container-toolkit | `--gpus all` 不生效  | 宿主机单独安装，非 pip 包                     |
+| nvidia-container-toolkit | 仅容器部署时需要       | 裸机 GPU 部署无需安装，直接使用宿主驱动       |
 
 ---
 
-## 7. 纯 Python 轻量版方案（无 Docker、无编译型软件）
+## 7. 全纯 Python 技术选型：依据与代价
 
 ### 7.1 动机与假设
 
-完整方案依赖 Docker 与编译型软件（NonLinLoc/C、HypoDD/Fortran），在以下场景构成障碍：快速原型验证、教学演示、无管理员权限的共享服务器、Windows/macOS 本地开发。本节论证一个关键假设：
+第 2 节的选型把历史上的编译型/Java 工具（NonLinLoc/C、HypoDD/Fortran、TauP/Java）换成了纯 Python 等价实现。
+做出这一取舍的动机是：**Docker 与编译工具链在快速原型验证、教学演示、无管理员权限的共享服务器、Windows/macOS 本地开发等场景下构成实际障碍**——而这些恰是本框架的主要使用场景。
 
-> **在不使用 Docker 和编译型软件的条件下，v1 工作流能否跑通？牺牲多大？**
+> **问题：不用 Docker、不用任何编译型软件，v1 工作流能否跑通？牺牲多大？**
 
-结论先行：**可以端到端跑通约 80% 的工作流并产出可用地震目录；唯一实质性损失集中在定位精度环节（P5/P6）**。
+结论先行：**可以端到端跑通并产出可用地震目录；唯一实质性损失集中在定位精度环节（P5/P6）**。
 
-### 7.2 逐阶段可行性评估
+### 7.2 逐阶段代价评估
 
-| 阶段                  | 原方案                  | 纯 Python 替代                                                    | 可行性            | 牺牲               |
+| 阶段                  | 常规方案（被替换）      | 本框架实现                                                        | 可行性            | 代价               |
 | --------------------- | ----------------------- | ----------------------------------------------------------------- | ----------------- | ------------------ |
-| P1 数据获取           | ObsPy FDSN              | ObsPy（不变）                                                     | ✅ 完全等价       | 无                 |
-| P2 预处理             | ObsPy                   | ObsPy（不变）                                                     | ✅ 完全等价       | 无                 |
-| P3 震相拾取           | SeisBench/PhaseNet      | SeisBench/PhaseNet（不变）                                        | ✅ 完全等价       | 无                 |
+| P1 数据获取           | ObsPy FDSN              | ObsPy（同为纯 Python）                                            | ✅ 完全等价       | 无                 |
+| P2 预处理             | ObsPy                   | ObsPy（同为纯 Python）                                            | ✅ 完全等价       | 无                 |
+| P3 震相拾取           | SeisBench/PhaseNet      | SeisBench/PhaseNet（同为纯 Python）                               | ✅ 完全等价       | 无                 |
 | P4 震相关联           | GaMMA                   | GaMMA 本身即纯 Python（AI4EPS/gamma）                             | ✅ 完全等价       | 无                 |
 | **P5 绝对定位** | NonLinLoc（C 编译）     | 自写 Geiger 迭代定位器：`obspy.taup` 走时 + 阻尼加权最小二乘 | ⚠️ 可跑通但降级 | 见 7.3             |
 | **P6 相对定位** | HypoDD/ph2dt（Fortran） | relocDD-py：HypoDD 的纯 Python 移植（安装阶段 git 安装，不做波形互相关） | ⚠️ 可跑通但降级 | 见 7.3             |
-| P7 震级计算           | ObsPy WA 仿真           | ObsPy（不变，Bakun & Joyner 1984 标定式）                          | ✅ 完全等价       | 无                 |
-| P8 制图质检           | PyGMT                   | 改用 Cartopy + Matplotlib                                         | ✅ 可行           | 出版级地图质量略降 |
+| P7 震级计算           | ObsPy WA 仿真           | ObsPy（同为纯 Python，Bakun & Joyner 1984 标定式）                | ✅ 完全等价       | 无                 |
+| P8 制图质检           | PyGMT + Cartopy         | 首选 PyGMT，GMT 缺失时回退 Cartopy + Matplotlib                   | ✅ 可行           | 出版级地图质量略降 |
 
 ### 7.3 两个关键降级点
 
@@ -493,7 +456,7 @@ flowchart LR
 
 1. **假设成立**：不依赖任何编译型软件的轻量版工作流可端到端跑通，产出可用地震目录，适合原型开发、教学演示和小区域研究。
 2. **核心牺牲量化**：定位精度是唯一实质损失——绝对定位用一维速度模型，深度误差放大 2–3 倍；P6 用 relocDD-py（ph2dt 不做波形互相关），精度低于完整 HypoDD。
-3. **架构建议——可插拔定位后端**：Skill 设计上把 P5/P6 做成可插拔后端，脚本接口不变（JSON in/out），内部按环境探测：存在 `hypoDD`/`NLLoc` 二进制则调用之，否则回退到纯 Python 定位器（P6 为 relocDD-py）。开发期（本机纯 Python）与生产期（容器内全功能）共用同一套 Skill，落实第 4.1 节"一套代码、两端复用"的原则。
+3. **架构建议——纯 Python 定位层**：Skill 把 P5/P6 分别固定在单一实现上——P5 为 `obspy.taup` 走时 + Geiger 迭代定位器，P6 为 relocDD-py；脚本接口不变（JSON in/out），不再做二进制探测与多后端分派。开发期与生产期共用同一套 Skill，落实第 4.1 节"一套代码、两端复用"的原则。
 
 ---
 

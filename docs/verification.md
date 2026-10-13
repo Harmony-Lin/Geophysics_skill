@@ -22,7 +22,7 @@
 | CP8b | 计时 | `pipeline_logs/timings.json` 记录每阶段耗时；报告含"耗时"小节；阶段日志含 `---ELAPSED---` |
 | CP8c | 分步计时 | P2 的分步耗时（`remove response` 等）经 `timings.json` 的 `steps[].timings` 进入报告"各阶段内部步骤"明细，且出现在 `preprocess.log` |
 
-P6（HypoDD 相对定位）默认跳过（`--skip hypodd`），因二进制缺失时自动回退。
+P6（relocDD-py 相对定位）默认跳过（`--skip hypodd`）；未安装 relocDD-py 时也自动跳过。
 
 ## 2. 前置条件
 
@@ -194,7 +194,7 @@ verify_ws/
 |------|------|
 | P0/P1/P2/P3 | ✅ 通过 |
 | P4 GaMMA | ✅ 通过（已适配 GMMA 1.2.17 新 API） |
-| P5/P7/P8 | ✅ 通过（回退纯 Python 网格定位，NLLoc/HypoDD 二进制未装） |
+| P5/P7/P8 | ✅ 通过（P5 为纯 Python Geiger 迭代定位，无编译型依赖） |
 
 P4 适配要点（GMMA 1.2.17 相对旧版的破坏性变更）：
 

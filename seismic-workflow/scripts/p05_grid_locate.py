@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Phase 5 (backend B): pure-Python absolute location via obspy.taup
-travel times + Geiger iterative inversion. No compiled binaries required.
+"""Phase 5: pure-Python absolute location via obspy.taup travel times +
+Geiger iterative inversion. No compiled binaries required.
 
 The event origin theta = (t0, lat, lon, depth) is obtained with the standard
 Geiger scheme:
@@ -404,7 +404,7 @@ def locate_event(picks_ev, stations, layers, lat_range, lon_range, dep_range):
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Phase 5 backend B: Geiger iterative absolute location "
+        description="Phase 5: Geiger iterative absolute location "
                     "(pure Python, obspy.taup)")
     parser.add_argument("--events", required=True, help="associated events CSV")
     parser.add_argument("--picks", required=True, help="picks CSV")

@@ -263,23 +263,14 @@ def run_pipeline(py: str, cwd: Path) -> dict:
         "--output", f"{w}/assoc/events.csv"], cwd)
     completed.append("associate")
 
-    # Phase 5 — pluggable backend
-    if shutil.which("NLLoc") or shutil.which("nll"):
-        results["locate"] = run_step("locate", [
-            py, SCRIPTS / "p05_run_nll_locate.py",
-            "--events", f"{w}/assoc/events.csv",
-            "--picks", f"{w}/picks/phasenet_picks.csv",
-            "--stations", stations_csv,
-            "--output-dir", f"{w}/locate/nll"], cwd)
-        final_catalog = f"{w}/locate/nll/catalog_abs.csv"
-    else:
-        results["locate"] = run_step("locate", [
-            py, SCRIPTS / "p05_grid_locate.py",
-            "--events", f"{w}/assoc/events.csv",
-            "--picks", f"{w}/picks/phasenet_picks.csv",
-            "--stations", stations_csv,
-            "--output", f"{w}/locate/catalog_abs.csv"], cwd)
-        final_catalog = f"{w}/locate/catalog_abs.csv"
+    # Phase 5 — pure-Python Geiger location
+    results["locate"] = run_step("locate", [
+        py, SCRIPTS / "p05_grid_locate.py",
+        "--events", f"{w}/assoc/events.csv",
+        "--picks", f"{w}/picks/phasenet_picks.csv",
+        "--stations", stations_csv,
+        "--output", f"{w}/locate/catalog_abs.csv"], cwd)
+    final_catalog = f"{w}/locate/catalog_abs.csv"
     completed.append("locate")
 
     # Phase 6 — optional (relocDD-py, installed from git at install time)

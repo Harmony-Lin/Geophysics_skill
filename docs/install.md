@@ -65,9 +65,10 @@ pip install -e seismic-workflow/.cache/relocdd-py
 ### SeisBench 权重（离线部署必做）
 有网环境预跑一次拾取脚本，使权重缓存到 `~/.cache/seisbench/`，随后整体拷贝到离线机器。
 
-## 3. 系统依赖（Linux 容器内）
+## 3. 系统依赖
 
-- gcc / gfortran / make（编译 HypoDD、NonLinLoc）
-- Java JRE ≥ 11（TauP）
-- GMT 6
-- NVIDIA 驱动 ≥535 + nvidia-container-toolkit（GPU 推理）
+全部定位流程为纯 Python（P5 用 `obspy.taup`，P6 用 relocDD-py），
+**不需要 gcc/gfortran/make，也不需要 Java JRE**。仅制图相关依赖如下：
+
+- GMT 6（仅 PyGMT 需要；缺失时 P8 自动回退 Cartopy + Matplotlib）
+- NVIDIA 驱动 ≥535 + nvidia-container-toolkit（仅 GPU 推理需要）

@@ -213,7 +213,7 @@ def read_picks(path: str | Path):
 
 
 def parse_tvel(path: str | Path):
-    """Parse a .tvel (TauP/NLLoc layered velocity model) file.
+    """Parse a .tvel (layered TauP velocity model) file.
 
     Returns list of dicts: {"vp": float, "vs": float, "top_km": float}.
     """

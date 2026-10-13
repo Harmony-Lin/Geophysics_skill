@@ -36,8 +36,14 @@ docker/*.log
 .DS_Store
 Thumbs.db
 
+#训导文档
+instructions.md
+
 # 测试runs
 runs/
 
 # 整个本地测试
 tmp_data/
+
+#备用
+备用/

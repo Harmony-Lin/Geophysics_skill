@@ -11,15 +11,14 @@ Geophysics/
 ├── instructions.md          # 设计文档
 ├── requirements.txt         # Python 依赖
 ├── seismic-workflow/        # 核心 Skill（遵循 agentskills.io 标准）
-│   ├── SKILL.md             # 技能定义（待编写）
+│   ├── SKILL.md             # 技能定义
 │   ├── scripts/             # 各阶段包装脚本
 │   ├── packages/            # 第三方包安装脚本（relocdd-py 等）
 │   ├── references/          # 深度参考文档
 │   └── assets/              # 模板与静态资源
 ├── docker/                  # Dockerfile 与 compose 编排
 ├── docs/                    # 安装与部署手册
-├── tests/                   # 测试
-└── data/                    # 数据目录（不入库）
+└── tests/                   # 默认测试内容
 ```
 
 ## 快速开始
@@ -32,8 +31,7 @@ source .venv/bin/activate     # Linux
 
 pip install -r requirements.txt
 
-# relocDD-py（双差定位后端）：上游无 setup.py/pyproject.toml，
-# 由仓库内补入的 pyproject.toml 做 git + pip install -e 安装，见 docs/install.md
+# relocDD-py（双差定位后端）：上游无 setup.py/pyproject.toml，需特殊脚本安装，见 docs/install.md
 python seismic-workflow/packages/relocdd-py/install.py
 ```
 
