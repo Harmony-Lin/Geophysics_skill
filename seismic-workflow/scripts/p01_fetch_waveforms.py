@@ -51,7 +51,7 @@ def local_scan(args) -> None:
     if not files:
         fail(f"no waveform files ({', '.join(sorted(WAVEFORM_EXTS))}) under {src}")
 
-    from obspy import Stream, read
+    from obspy import read
 
     n_ok = 0
     net_sta = {}
@@ -71,16 +71,12 @@ def local_scan(args) -> None:
 
     # Build station metadata from inventory embedded in files when possible.
     inv_rows = []
-    try:
-        from obspy import read_inventory
-        inv_files = list(src.rglob("*.xml")) + list(src.rglob("*.stationxml"))
-        for xf in inv_files:
-            try:
-                inv_rows.extend(stations_from_xml(xf))
-            except Exception as exc:
-                warn(f"bad station XML skipped: {xf} ({exc})")
-    except ImportError:
-        pass
+    inv_files = list(src.rglob("*.xml")) + list(src.rglob("*.stationxml"))
+    for xf in inv_files:
+        try:
+            inv_rows.extend(stations_from_xml(xf))
+        except Exception as exc:
+            warn(f"bad station XML skipped: {xf} ({exc})")
 
     if not inv_rows:
         # Fall back: derive station codes from filenames/traces without coords.

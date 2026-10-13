@@ -3,21 +3,21 @@
 travel times + Geiger iterative inversion. No compiled binaries required.
 
 The event origin theta = (t0, lat, lon, depth) is obtained with the standard
-Geiger scheme (see obs_taup_scipy_Geiger定位器方法论详解.md):
+Geiger scheme:
 
 1. forward model t_cal_i = t0 + T_i(lat, lon, depth) via obspy.taup;
 2. travel-time residual r_i = t_obs_i - t_cal_i;
-3. numerical Jacobian A = d t_cal / d theta (column for t0 is analytic, = 1;
-   lat/lon/depth columns use finite differences - md §4.2);
-4. damped weighted normal equations delta = (A^T W A + eps I)^-1 A^T W r
-   with a relaxation factor alpha applied to the update (md §7.4);
-5. weights: phase type (P = 1.0, S = 0.6, md §5.1) times Tukey biweight
-   robust weights from the MAD-scaled residuals (md §5.2);
-6. iterate until RMS < 0.1 s or the parameter change < 1e-4 (md §7.3), plus a
-   stagnation guard that stops once the RMS stops improving appreciably.
+3. numerical Jacobian A = d t_cal / d theta (the t0 column is analytic, = 1;
+   the lat/lon/depth columns use finite differences);
+4. damped weighted normal equations delta = (A^T W A + eps I)^-1 A^T W r,
+   with a relaxation factor alpha applied to the update;
+5. weights: phase type (P = 1.0, S = 0.6) times Tukey biweight robust weights
+   from the MAD-scaled residuals;
+6. iterate until RMS < 0.1 s or the parameter change < 1e-4, plus a stagnation
+   guard that stops once the RMS stops improving appreciably.
 
-Known limitations (see instructions.md §7.3): 1-D velocity model only,
-no PDF uncertainty output, depth error typically 2-5 km.
+Known limitations (see instructions.md §7.3): 1-D velocity model only, no PDF
+uncertainty output, depth error typically 2-5 km.
 """
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import (emit, ensure_dir, fail, haversine_km, load_stations,  # noqa: E402
+from common import (emit, ensure_dir, haversine_km, load_stations,  # noqa: E402
                     log, parse_tvel, read_picks, run_main, warn)
 
 
@@ -188,19 +188,18 @@ def travel_times(layers, ev_lat, ev_lon, ev_depth, sta_lat, sta_lon):
         return float(path / vp), float(path / vs)
 
 
-# --- Geiger iteration controls (obs_taup_scipy_Geiger定位器方法论详解.md §5-§7) --
+# --- Geiger iteration controls ---------------------------------------------
 _TOL_RMS = 0.1            # converged when weighted RMS < this (s)
 _TOL_PARAM = 1e-4         # converged when max |delta theta| < this
 _MIN_ITER = 3             # never stop before this many iterations
 _MAX_ITER = 50
-_RELAX = 0.5              # relaxation factor alpha (md §7.4)
-_DAMPING = 1e-6           # Tikhonov damping eps (md §7.4)
-_STEP_LATLON = 0.01       # finite-difference step, deg (md §4.2)
+_RELAX = 0.5              # relaxation factor alpha applied to the update
+_DAMPING = 1e-6           # Tikhonov damping eps
+_STEP_LATLON = 0.01       # finite-difference step, deg
 _STEP_DEPTH = 0.01        # finite-difference step, km
-_INIT_DEPTH_KM = 10.0     # crustal default initial depth (md §7.2)
-_PHASE_WEIGHT = {"P": 1.0, "S": 0.6}   # md §5.1
+_INIT_DEPTH_KM = 10.0     # crustal default initial depth
+_PHASE_WEIGHT = {"P": 1.0, "S": 0.6}
 _ROBUST_MIN_OBS = 6       # only re-weight when enough observations remain
-_ROBUST_AFTER = 0         # robust weights from the very first iteration
 _STALL_ITERS = 3          # look back this many iterations for improvements
 _STALL_RATIO = 1e-3       # stop when the RMS improves by less than this
 
@@ -274,7 +273,7 @@ def _predicted_times(layers, observations, sta_lat, sta_lon, theta):
 
 
 def _tukey_weights(residuals, c: float = 1.345):
-    """Tukey biweight weights of residuals, MAD-scaled (md §5.2)."""
+    """Tukey biweight weights of residuals, MAD-scaled."""
     abs_r = np.abs(np.asarray(residuals, dtype=float))
     median_abs = float(np.median(abs_r))
     if median_abs < 1e-10:
@@ -283,15 +282,13 @@ def _tukey_weights(residuals, c: float = 1.345):
     return np.where(u < 1.0, (1.0 - u ** 2) ** 2, 0.0)
 
 
-def locate_event(picks_ev, stations, layers,
-                 lat_range, lon_range, dep_range, cell_km=5.0):
+def locate_event(picks_ev, stations, layers, lat_range, lon_range, dep_range):
     """Geiger location of one event (damped weighted least squares).
 
-    ``cell_km`` is a deprecated positional argument kept for interface
-    compatibility and ignored. Returns ``None`` when fewer than 3 P picks can
-    be matched to stations, otherwise a dict with ``lat``, ``lon``, ``depth``,
-    ``origin`` (seconds relative to the caller's reference time), ``rms``
-    (weighted travel-time RMS in s) plus ``n_obs`` / ``n_iter`` diagnostics.
+    Returns ``None`` when fewer than 3 P picks can be matched to stations,
+    otherwise a dict with ``lat``, ``lon``, ``depth``, ``origin`` (seconds
+    relative to the caller's reference time), ``rms`` (weighted travel-time RMS
+    in s) plus ``n_obs`` / ``n_iter`` diagnostics.
     """
     station_rows = {}
     # ``station_code`` is the pre-computed bare code; fall back to parsing the
@@ -308,8 +305,8 @@ def locate_event(picks_ev, stations, layers,
     t_obs = np.array([obs[2] for obs in observations], dtype=float)
     w_phase = np.array([obs[3] for obs in observations], dtype=float)
 
-    # initial guess (md §7.2): box centre for lat/lon, 10 km depth, and t0 from
-    # the earliest P pick minus its theoretical travel time.
+    # initial guess: box centre for lat/lon, 10 km depth, and t0 from the P
+    # picks minus their theoretical travel time.
     theta = np.array([0.0,
                       0.5 * (lat_range[0] + lat_range[1]),
                       0.5 * (lon_range[0] + lon_range[1]),
@@ -338,7 +335,7 @@ def locate_event(picks_ev, stations, layers,
         r = t_obs[mask] - t_cal[mask]
 
         weights = w_phase[mask].copy()
-        if iteration >= _ROBUST_AFTER and n_valid >= _ROBUST_MIN_OBS:
+        if n_valid >= _ROBUST_MIN_OBS:
             weights = weights * _tukey_weights(r)
         if weights.sum() <= 0.0:
             weights = w_phase[mask].copy()
@@ -355,7 +352,7 @@ def locate_event(picks_ev, stations, layers,
             best = (rms_sel, theta.copy())
         stall = 0 if rms_sel < previous_best * (1.0 - _STALL_RATIO) else stall + 1
 
-        # Jacobian of the predicted arrival times (md §3.5 / §4.2)
+        # Jacobian of the predicted arrival times, finite differences
         jac = np.zeros((n_valid, 4))
         jac[:, 0] = 1.0
         for col, step in ((1, _STEP_LATLON), (2, _STEP_LATLON),
@@ -415,15 +412,8 @@ def main() -> None:
     parser.add_argument("--velocity-model", dest="velocity_model",
                         default=str(Path(__file__).parent.parent / "assets" / "iasp91.tvel"))
     parser.add_argument("--output", required=True, help="located catalog CSV")
-    parser.add_argument("--cell-km", dest="cell_km", type=float, default=5.0,
-                        help="DEPRECATED, ignored: the Geiger iteration uses "
-                             "no search grid")
     parser.add_argument("--max-depth-km", dest="max_depth_km", type=float, default=40.0)
     args = parser.parse_args()
-
-    if args.cell_km != 5.0:
-        warn("--cell-km is deprecated and ignored: the Geiger locator does "
-             "not use a search grid")
 
     import pandas as pd
 
@@ -484,7 +474,7 @@ def main() -> None:
         lon_box = (ev["longitude"] - 0.5, ev["longitude"] + 0.5)
         dep_box = (0.0, args.max_depth_km)
         best = locate_event(ev_picks, stations, layers,
-                            lat_box, lon_box, dep_box, cell_km=args.cell_km)
+                            lat_box, lon_box, dep_box)
         if best is None:
             warn(f"{ev['event_id']}: location failed")
             continue
@@ -516,7 +506,6 @@ def main() -> None:
         "n_located": n_located,
         "catalog_file": str(out),
         "velocity_model": args.velocity_model,
-        "cell_km": args.cell_km,
         "note": "1-D model Geiger iteration (damped weighted least squares); "
                 "depth error typically 2-5 km",
     })

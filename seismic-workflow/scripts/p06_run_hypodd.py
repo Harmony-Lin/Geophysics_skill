@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Phase 6 (backend A): relocDD-py wrapper (pure Python double-difference).
+"""Phase 6: relocDD-py wrapper (pure Python double-difference relocation).
 
 Pipeline: catalog + picks -> phase.dat/station.dat -> relocDD-py ph2dt
 (catalog differential times) -> relocDD-py hypoDD (inversion) -> parse
 hypoDD.reloc -> CSV.  No compiled Fortran binaries required; relocDD-py is
 installed at install time from git (see packages/relocdd-py/install.py).
 
-NOTE: relocDD-py's ph2dt builds differential times from the *catalog picks*
-(phase.dat) only -- it does NOT perform waveform cross-correlation.  The
---waveforms argument is therefore accepted for CLI compatibility but ignored.
+ph2dt builds its differential times from the *catalog picks* (phase.dat) only;
+relocDD-py performs no waveform cross-correlation, so no waveforms are needed.
 """
 from __future__ import annotations
 
@@ -18,7 +17,7 @@ import math
 import re
 import shutil
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -349,11 +348,8 @@ def _emit_no_pairs(workdir: Path, n_input: int) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Phase 6 backend A: relocDD-py (pure Python DD) wrapper")
+        description="Phase 6: relocDD-py (pure Python DD) wrapper")
     parser.add_argument("--catalog", required=True, help="absolute-located catalog CSV")
-    parser.add_argument("--waveforms",
-                        help="preprocessed waveform dir (ignored by relocDD-py; "
-                             "kept for CLI compatibility)")
     parser.add_argument("--stations", required=True, help="stations CSV")
     parser.add_argument("--picks",
                         help="PhaseNet picks CSV (default: inferred from --catalog)")

@@ -597,7 +597,7 @@ def main() -> int:
     mags = [e["mag"] for e in aftershocks]
     log(f"Scenario : M{mainshock['mag']:.2f} {mainshock['time']} "
         f"{mainshock['place']} ({mainshock['id']})")
-    log(f"Events   : mainshock"
+    log("Events   : mainshock"
         + (f" + {len(aftershocks)} largest aftershocks "
            f"(M{min(mags):.2f}-M{max(mags):.2f})" if mags else ""))
     log(f"Channels : {sum(len(c.split(',')) for c in channel_lines.values())} "

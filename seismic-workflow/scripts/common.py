@@ -203,38 +203,6 @@ def ensure_dir(path: str | Path) -> Path:
     return p
 
 
-def count_files(directory: str | Path, pattern: str = "*") -> int:
-    return sum(1 for f in Path(directory).rglob(pattern) if f.is_file())
-
-
-# ---------------------------------------------------------------------------
-# Catalog CSV schema shared across phases
-# ---------------------------------------------------------------------------
-CATALOG_COLUMNS = [
-    "event_id", "time", "latitude", "longitude", "depth_km",
-    "magnitude", "magnitude_type", "n_picks", "rms_s",
-]
-
-PICK_COLUMNS = [
-    "station", "phase", "time", "probability", "amplitude",
-]
-
-
-def read_catalog(path: str | Path):
-    import pandas as pd
-    df = pd.read_csv(path)
-    missing = [c for c in ("latitude", "longitude") if c not in df.columns]
-    if missing:
-        raise ValueError(f"catalog {path} missing columns: {missing}")
-    return df
-
-
-def write_catalog(df, path: str | Path) -> None:
-    import pandas as pd
-    ensure_dir(Path(path).parent)
-    pd.DataFrame(df).to_csv(path, index=False)
-
-
 def read_picks(path: str | Path):
     import pandas as pd
     df = pd.read_csv(path)

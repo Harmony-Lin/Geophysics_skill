@@ -8,15 +8,15 @@ NLL formats directly.
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 import subprocess
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import emit, ensure_dir, fail, load_stations, log, read_picks, warn  # noqa: E402
+from common import (emit, ensure_dir, fail, load_stations, log,  # noqa: E402
+                    read_picks, run_main, warn)
 
 
 def find_nll() -> str:
@@ -25,7 +25,7 @@ def find_nll() -> str:
         if path:
             return path
     fail("NLLoc binary not found on PATH",
-         hint="build/install NonLinLoc or use backend B: scripts/grid_locate.py")
+         hint="build/install NonLinLoc or use backend B: p05_grid_locate.py")
     return ""
 
 
@@ -72,15 +72,8 @@ def parse_hyp(hyp_path: Path):
     """Minimal .hyp scatter/final-result parser -> dict per event."""
     results = []
     current = None
-    in_signature = False
     with open(hyp_path) as fh:
         for line in fh:
-            if line.startswith("SIGNATURE"):
-                in_signature = True
-                continue
-            if line.startswith("PHASE"):
-                in_signature = False
-                continue
             if line.startswith("END_NLLOC"):
                 if current:
                     results.append(current)

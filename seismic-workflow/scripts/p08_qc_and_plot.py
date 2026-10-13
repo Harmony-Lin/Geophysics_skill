@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import time
 from pathlib import Path
 
 import numpy as np
@@ -16,29 +15,35 @@ from common import (StepTimer, emit, ensure_dir, fail, format_duration,  # noqa:
                     load_stations, log, phase_label, run_main, warn)
 
 
-def _annotate_events(ax, catalog, max_labels=30):
-    """Annotate event time + magnitude next to each epicenter (subset if many)."""
+def _event_labels(catalog, max_labels: int = 30):
+    """Yield ``(longitude, latitude, label)`` for a subset of the events.
+
+    The label is "<magnitude> <MM-DD HH:MM>"; when a catalog is larger than
+    ``max_labels`` only every n-th event is labelled, so the map stays legible.
+    """
     import pandas as pd
-    n = len(catalog)
-    step = max(1, int(np.ceil(n / max_labels)))
+    step = max(1, int(np.ceil(len(catalog) / max_labels)))
     for i, row in enumerate(catalog.itertuples()):
         if i % step:
             continue
-        t = getattr(row, "time", None)
-        t_str = ""
-        if t is not None and not pd.isna(t):
-            try:
-                t_str = str(pd.Timestamp(t).strftime("%m-%d %H:%M"))
-            except Exception:
-                t_str = ""
         mag = pd.to_numeric(pd.Series([getattr(row, "magnitude", None)]),
                             errors="coerce").iloc[0]
-        label = " ".join(x for x in (
-            f"M{mag:.1f}" if pd.notna(mag) else "", t_str) if x)
-        if label:
-            ax.annotate(label, (row.longitude, row.latitude),
-                        textcoords="offset points", xytext=(6, 6),
-                        fontsize=6, color="darkred")
+        parts = [f"M{mag:.1f}"] if pd.notna(mag) else []
+        t = getattr(row, "time", None)
+        if t is not None and not pd.isna(t):
+            try:
+                parts.append(str(pd.Timestamp(t).strftime("%m-%d %H:%M")))
+            except (TypeError, ValueError):
+                pass
+        if parts:
+            yield row.longitude, row.latitude, " ".join(parts)
+
+
+def _annotate_events(ax, catalog) -> None:
+    """Annotate event time + magnitude next to each epicenter."""
+    for lon, lat, label in _event_labels(catalog):
+        ax.annotate(label, (lon, lat), textcoords="offset points",
+                    xytext=(6, 6), fontsize=6, color="darkred")
 
 
 def _ne_scale(extent) -> str:
@@ -48,7 +53,7 @@ def _ne_scale(extent) -> str:
 
 
 def _add_cartopy_basemap(ax, extent, admin1: bool = True) -> list:
-    """Cartopy 底图：海陆（海洋/陆地/海岸线）+ 行政边界（国界/省界）。
+    """Ocean/land/coastline plus national (and optionally state) borders.
 
     Each layer is added on its own so that missing Natural Earth data (or a
     shapely/GEOS quirk) only drops that layer instead of the whole basemap.
@@ -74,7 +79,7 @@ def _add_cartopy_basemap(ax, extent, admin1: bool = True) -> list:
         except Exception as exc:  # missing or broken Natural Earth data
             warn(f"basemap layer {name} skipped ({exc})")
             continue
-        drawn.append(name)
+        drawn.append(name) 
     return drawn
 
 
@@ -143,7 +148,7 @@ def _draw_epicenter_figure(catalog, stations, mags, extent, *, cartopy=True,
     ax.set_ylabel("Latitude")
     ax.set_title("Epicenter distribution")
     ax.legend(loc="upper left")
-    if not cartopy:  # Cartopy 底图已按 extent 定尺寸，自动布局会触发网格标注缺陷
+    if not cartopy:  # Cartopy sizes itself from the extent already
         fig.tight_layout()
     return fig, backend, layers
 
@@ -151,9 +156,9 @@ def _draw_epicenter_figure(catalog, stations, mags, extent, *, cartopy=True,
 def plot_epicenter_map(catalog, stations, out_png: Path):
     """Plot the epicenter map. Returns (backend name, basemap layers drawn).
 
-    Backend order: PyGMT (出版级，自带海岸线/国界) → Cartopy（增绘海陆与
-    行政边界底图）→ 纯 Matplotlib。Cartopy 底图按"图层最全者先试"逐级降级，
-    因此网格标注或省界数据出问题时只丢弃该层，底图其余部分仍保留。
+    Backend order: PyGMT → Cartopy → plain Matplotlib. The Cartopy layers are
+    tried most-complete-first and degraded one at a time, so a gridline or
+    state-border problem only drops that layer.
     """
     lon_min = float(min(catalog["longitude"].min(),
                         stations["longitude"].min())) - 0.3
@@ -229,28 +234,11 @@ def plot_epicenter_map(catalog, stations, out_png: Path):
     fail("epicenter map could not be rendered by any backend")
 
 
-def _pygmt_event_text(fig, catalog, max_labels=30):
-    """Annotate event time+magnitude on a PyGMT figure (subset if many)."""
-    import pandas as pd
-    n = len(catalog)
-    step = max(1, int(np.ceil(n / max_labels)))
-    for i, row in enumerate(catalog.itertuples()):
-        if i % step:
-            continue
-        t = getattr(row, "time", None)
-        t_str = ""
-        if t is not None and not pd.isna(t):
-            try:
-                t_str = str(pd.Timestamp(t).strftime("%m-%d %H:%M"))
-            except Exception:
-                t_str = ""
-        mag = pd.to_numeric(pd.Series([getattr(row, "magnitude", None)]),
-                            errors="coerce").iloc[0]
-        label = " ".join(x for x in (
-            f"M{mag:.1f}" if pd.notna(mag) else "", t_str) if x)
-        if label:
-            fig.text(x=row.longitude, y=row.latitude, text=label,
-                     offset="0.15c/0.15c", font="6p,Helvetica,darkred")
+def _pygmt_event_text(fig, catalog) -> None:
+    """Annotate event time+magnitude on a PyGMT figure."""
+    for lon, lat, label in _event_labels(catalog):
+        fig.text(x=lon, y=lat, text=label,
+                 offset="0.15c/0.15c", font="6p,Helvetica,darkred")
 
 
 def plot_gr(catalog, out_png: Path):
@@ -310,9 +298,12 @@ def plot_depth_hist(catalog, out_png: Path) -> None:
 
 def plot_residuals(catalog, out_png: Path):
     import pandas as pd
-    rms = pd.to_numeric(catalog.get("rms_s"), errors="coerce").dropna()
-    if len(rms) == 0:
+    if "rms_s" not in catalog.columns:
         warn("no rms_s column — skipping residual plot")
+        return None
+    rms = pd.to_numeric(catalog["rms_s"], errors="coerce").dropna()
+    if len(rms) == 0:
+        warn("no usable rms_s values — skipping residual plot")
         return None
     import matplotlib
     matplotlib.use("Agg")
@@ -389,8 +380,9 @@ def plot_pick_samples(picks_csv, waveform_dir, out_png: Path,
     ev = picks[picks.event == ev_idx]
     t0 = ev["time"].min()
 
-    # 窗口必须覆盖整个聚类事件：簇内拾取跨度（地区震相 P 波列 + S 尾波）常
-    # 远超固定的 60 s，窗口过窄会让大量子图一条拾取线都画不出来。
+    # The window has to cover the whole cluster: within one cluster the picks
+    # span far more than a fixed 60 s, and a too-narrow window leaves subplots
+    # without a single pick line.
     span_s = float((ev["time"].max() - t0).total_seconds())
     auto_window = window_s is None or window_s <= 0
     if auto_window:

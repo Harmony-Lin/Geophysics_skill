@@ -22,6 +22,8 @@ models/
 *.pt
 *.pth
 
+
+
 # 缓存
 .cache/
 seisbench_cache/
@@ -33,3 +35,9 @@ docker/*.log
 # 系统
 .DS_Store
 Thumbs.db
+
+# 测试runs
+runs/
+
+# 整个本地测试
+tmp_data/

@@ -105,8 +105,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Phase 7: compute ML magnitudes (Wood-Anderson)")
     parser.add_argument("--catalog", required=True, help="located catalog CSV")
-    parser.add_argument("--waveforms", required=True)#这个waveform在传值的时候传的是raw还是processed？
-    parser.add_argument("--stations", help="StationXML with response") #使用仪器响应文件来模拟WA地震仪的相应，得到ML震级
+    parser.add_argument("--waveforms", required=True,
+                        help="waveform dir (p02 output, i.e. velocity m/s)")
+    parser.add_argument("--stations", help="StationXML with instrument responses")
     parser.add_argument("--output", required=True)
     parser.add_argument("--assume-units", default="VEL",
                         choices=["VEL", "DISP", "COUNTS"],
@@ -127,7 +128,6 @@ def main() -> None:
         fail(f"no waveform files under {args.waveforms}")
         return
 
-    # ── 加载台站响应 ──
     inventory = None
     if args.stations and Path(args.stations).exists():
         try:
@@ -146,19 +146,16 @@ def main() -> None:
         })
         return
 
-    # ── 加载台站位置信息 ──
+    # Station coordinates, expected next to the StationXML (p01 writes both).
     stas = None
-    try:
+    csv_path = args.stations.replace(".xml", ".csv")
+    if Path(csv_path).exists():
         from common import load_stations
-        csv_path = args.stations.replace(".xml", ".csv")
-        if Path(csv_path).exists():
-            stas = load_stations(csv_path)
-            log(f"Loaded station list from {csv_path} ({len(stas)} stations)")
-        else:
-            warn(f"station CSV not found at {csv_path}; "
-                 "distances will fall back to 10 km — results unreliable")
-    except Exception as exc:
-        warn(f"failed to load station CSV ({exc})")
+        stas = load_stations(csv_path)
+        log(f"Loaded station list from {csv_path} ({len(stas)} stations)")
+    else:
+        warn(f"station CSV not found at {csv_path}: epicentral distances are "
+             "unavailable, so no magnitude can be computed")
 
     # ── 加载波形并去响应 ──
     log("Loading waveforms...")
@@ -216,16 +213,12 @@ def main() -> None:
                     })
 
     # ── 按事件计算震级 ──
+    from common import haversine_km
     from obspy import UTCDateTime
 
     diag = []
     mags = []
-    total_traces = len(stream)
-    log(f"Total traces loaded: {total_traces}")
-    if stas is not None:
-        log(f"Station list: {len(stas)} stations, columns={list(stas.columns)}, sample_stations={stas['station'].head(5).tolist()}")
-    else:
-        warn("No station CSV loaded — epicentral distances will use default 10 km!")
+    log(f"Total traces loaded: {len(stream)}")
 
     sta_codes = None
     if stas is not None:
@@ -233,91 +226,60 @@ def main() -> None:
 
     n_matched = 0
     n_unmatched = 0
-    for _, ev in catalog.iterrows(): #事件循环，仅ev001情况下只执行一次，理论上只会计算本事件的S波最大振幅。
+    for _, ev in catalog.iterrows():
         ev_time = pd.Timestamp(ev["time"])
         origin = UTCDateTime(ev_time.to_pydatetime())
 
-        log(f"\n--- Event: {ev.get('event_id', 'N/A')} @ "
-            f"({ev['latitude']:.4f}, {ev['longitude']:.4f}), depth={ev.get('depth_km', 0.0):.1f} km")
+        log(f"Event {ev.get('event_id', 'N/A')} @ "
+            f"({ev['latitude']:.4f}, {ev['longitude']:.4f}), "
+            f"depth={ev.get('depth_km', 0.0):.1f} km")
 
+        depth_km = float(ev.get("depth_km", 0.0) or 0.0)
         ml_values = []
 
-        for tr_idx, tr in enumerate(stream):
-            # 只取水平分量
+        for tr in stream:
+            # Only horizontal components carry the S amplitude used here.
             if not _is_horizontal_channel(tr.stats.channel):
                 continue
+            if sta_codes is None:
+                continue
 
-            sta_name = tr.stats.station
-            chan_code = tr.stats.channel
-            net_code = getattr(tr.stats, 'network', '?')
-            log_key = f"{net_code}.{sta_name}.{chan_code}"
-
-            # 基于走时的时间窗口（简化：使用经验走时估算）
-            # 对于本地地震，S 波走时 ≈ 距离 / 3.5 km/s
-            # 这里先用一个较宽松的窗口，后续可替换为精确走时表
-            r_epi_km = 10.0
-            matched = False
-            if sta_codes is not None:
-                match_mask = sta_codes == sta_name
-                match_count = int(match_mask.sum())
-
-                if match_count > 0:
-                    # 可能有多个匹配（同一台站出现在不同行），取第一个
-                    match_idx = stas.index[match_mask][0]
-                    sta_lat = float(stas.loc[match_idx, "latitude"])
-                    sta_lon = float(stas.loc[match_idx, "longitude"])
-                    
-                    from common import haversine_km
-                    r_epi_km = float(haversine_km(
-                        ev["latitude"], ev["longitude"],
-                        sta_lat, sta_lon,
-                    ))
-                    matched = True
-                    n_matched += 1
-
-            if not matched:
+            match_mask = sta_codes == tr.stats.station
+            if not match_mask.any():
+                # Without coordinates there is no epicentral distance, hence no
+                # usable amplitude-to-magnitude conversion: skip, never guess.
                 n_unmatched += 1
-                warn(f"  Event [{ev.get('event_id', 'N/A')}] trace "
-                     f"[{log_key}] station '{sta_name}' NOT FOUND in station list!")
-                if n_unmatched <= 3:
-                    # 打印前几个未匹配的台站，展示 stations.csv 中实际有的值
-                    show_samples = stas["station"].head(10).tolist() if stas is not None else []
-                    warn(f"   stations.csv sample stations: {show_samples}")
-
-            depth_km = float(ev.get("depth_km", 0.0) or 0.0)
+                continue
+            n_matched += 1
+            match_idx = stas.index[match_mask][0]
+            r_epi_km = float(haversine_km(
+                ev["latitude"], ev["longitude"],
+                float(stas.loc[match_idx, "latitude"]),
+                float(stas.loc[match_idx, "longitude"])))
             r_hyp_km = float(np.sqrt(r_epi_km ** 2 + depth_km ** 2))
 
-            # 打印前 3 个台站的详细信息用于调试
-            if matched and n_matched <= 3:
-                log(f"  [{log_key}] epi_dist={r_epi_km:.2f} km, hyp_dist={r_hyp_km:.2f} km "
-                    f"(sta_lat={sta_lat:.4f}, sta_lon={sta_lon:.4f})")
-
-            # 时间窗口：从 P 波到时前 5 秒开始，持续 max(30, 距离/3) 秒
-            p_travel = max(r_epi_km / 6.0, 1.0)   # P 波粗略走时
-            s_travel = max(r_epi_km / 3.5, 2.0)   # S 波粗略走时
+            # Rough travel-time window: P onset minus 5 s, long enough to cover
+            # the S phase and its coda at these distances.
+            p_travel = max(r_epi_km / 6.0, 1.0)
+            s_travel = max(r_epi_km / 3.5, 2.0)
             win_start = origin + p_travel - 5
-            win_duration = max(30.0, s_travel - p_travel + 20.0)
-            win_end = win_start + win_duration
+            win_end = win_start + max(30.0, s_travel - p_travel + 20.0)
 
             windowed = tr.slice(win_start, win_end)
             if len(windowed.data) == 0:
                 continue
 
-            # WA 零到峰位移振幅（毫米）
             amp_mm = _wa_amplitude_mm(windowed)
             if amp_mm <= 0.0:
                 continue
 
-            # 标定式使用震源距
-            hypocentral_km = r_hyp_km
-
-            ml = _ml_from_wa_amplitude(amp_mm, hypocentral_km)
+            ml = _ml_from_wa_amplitude(amp_mm, r_hyp_km)
             ml_values.append(ml)
             diag.append({
                 "event_id": ev["event_id"],
                 "trace_id": tr.id,
                 "epicentral_km": round(r_epi_km, 2),
-                "hypocentral_km": round(hypocentral_km, 2),
+                "hypocentral_km": round(r_hyp_km, 2),
                 "amplitude_mm": round(amp_mm, 8),
                 "single_ml": round(ml, 2),
             })
@@ -331,14 +293,11 @@ def main() -> None:
             })
             continue
 
-        # 剔除偏离中位数超过 0.5 级的异常值后取中位数
+        # Median after dropping single-station values that deviate by >0.5
         ml_arr = np.array(ml_values)
-        med = np.median(ml_arr)
-        mask = np.abs(ml_arr - med) <= 0.5
-        ml_filtered = ml_arr[mask]
-
+        ml_filtered = ml_arr[np.abs(ml_arr - np.median(ml_arr)) <= 0.5]
         if len(ml_filtered) == 0:
-            ml_filtered = ml_arr  # 全部异常时回退
+            ml_filtered = ml_arr
 
         ml_final = float(np.median(ml_filtered))
         mags.append({
@@ -347,21 +306,15 @@ def main() -> None:
             "magnitude_type": "ML",
             "n_stations_used": len(ml_filtered),
         })
-        log(f"  -> ML={ml_final:.2f} (from {len(ml_filtered)} stations, "
+        log(f"ML={ml_final:.2f} (from {len(ml_filtered)} traces, "
             f"raw range=[{ml_arr.min():.2f}, {ml_arr.max():.2f}])")
 
-    # ── 汇总统计 ──
-    log(f"\n=== Magnitude Calculation Summary ===")
-    log(f"  Total trace-event pairs processed: {n_matched + n_unmatched}")
-    log(f"  Station matched: {n_matched}")
-    log(f"  Station NOT matched: {n_unmatched} (used default 10 km distance)")
-    log("===========================")
+    log(f"Magnitude calculation: {n_matched} trace-event pairs used, "
+        f"{n_unmatched} skipped (station absent from the station table)")
 
-    # ── 合并结果并输出 ──
-    # 本阶段是震级的唯一权威来源：上游 catalog 若已带 magnitude / magnitude_type
-    # （例如 fetch_templeton.py 写入的公开目录），必须被本阶段结果覆盖，而不是
-    # 反过来用 combine_first 保留上游值——否则对外看到的还是旧震级，
-    # 且 magnitude_type 会因为 "_new" 列被删除而变成空值。
+    # This phase is the authoritative source of magnitude: any magnitude the
+    # upstream catalog carries (e.g. the published values fetch_templeton.py
+    # writes) is replaced, not kept alongside.
     mag_df = pd.DataFrame(mags)
     out = catalog.drop(
         columns=[c for c in ("magnitude", "magnitude_type")
@@ -372,7 +325,7 @@ def main() -> None:
     ensure_dir(out_path.parent)
     out.to_csv(out_path, index=False)
 
-    # 输出诊断表，便于排查震级异常
+    # Per-trace amplitudes for diagnosing odd magnitudes
     diag_path = None
     if diag:
         diag_path = out_path.with_suffix(".magnitude_diag.csv")

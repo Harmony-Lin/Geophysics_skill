@@ -12,8 +12,7 @@ relocDD-py（https://github.com/katie-biegel/relocDD-py，GPL-3.0，作者 Kathe
 1. **ph2dt**：基于目录重合拾取（phase.dat）生成事件对差分走时 `dte.ct`
 2. **hypoDD**：用差分走时反演事件相对位置，输出 `hypoDD.reloc`
 
-> 注意：relocDD-py 的 ph2dt **只做目录差分走时，不做波形互相关**。
-> 因此 `--waveforms` 参数仅为 CLI 兼容保留，不参与计算。
+> 注意：relocDD-py 的 ph2dt **只做目录差分走时，不做波形互相关**，因此无需波形文件。
 
 包装器 `scripts/p06_run_hypodd.py` 已封装全流程；本文供调参时参考。
 
@@ -88,16 +87,6 @@ MAXOBS 30        # 事件对最多共享数据
 | 事件对过少、反演失败 | 增大 MAXDIST；检查 phase.dat 台站/震相是否匹配 |
 | 收敛失败 | 检查是否有离群事件；检查速度模型（hypoDD.inp 的 VEL/RATIO） |
 | `ph2dt linked no event pairs`（`outliers` 接近 100%，`linked event pairs = 0`） | 先排查 phase.dat：震相列必须是**相对发震时刻的走时**（历史上包装器误写当日秒数，已修复，见上文格式说明）。确认走时正确后仍为 0，则属**参数无法解决**的情形：事件两两之间在空间**或发震时刻**上不聚集时全部差分走时被判为离群，没有任何 MINLNK/MINOBS/MAXSEPE 组合能造出事件对。用时间窗更短、空间更聚焦的资料重跑，或保留绝对定位目录 |
-
-## 纯 Python 回退说明
-
-`scripts/p06_simple_dd.py` 是简化版 DD：仅做差分时间的台站校正项反演，
-**不求解完整的震源参数+速度联合反演**。适用场景：
-
-- 数百事件的小数据集原型验证
-- 教学演示双差法原理
-
-精度预期：介于绝对定位与完整 relocDD-py 之间，无法达到 0.1 s/百米级。
 
 ## 结果验证
 

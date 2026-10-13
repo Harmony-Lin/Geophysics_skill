@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -91,26 +92,23 @@ def _has_module(name: str) -> bool:
 
 
 def parse_last_json(text: str) -> dict:
-    """Extract the last complete JSON object from mixed stdout.
+    """Extract the last top-level JSON object from mixed stdout.
 
-    Some libraries (e.g. GaMMA) print progress lines to stdout, polluting
-    the JSON contract; find the OUTERMOST/LONGEST {...} block that parses.
+    Some libraries (e.g. GaMMA) print progress lines to stdout, so the JSON is
+    not the whole stream; phase scripts print their payload with ``indent=2``,
+    i.e. with its opening brace in column 0.
     """
     if not text or not text.strip():
         return {}
     decoder = json.JSONDecoder()
-    candidates = []
-    for idx in range(len(text)):
-        if text[idx] != "{":
-            continue
+    for match in reversed(list(re.finditer(r"^\{", text, re.MULTILINE))):
         try:
-            obj, end = decoder.raw_decode(text[idx:])
-            candidates.append((idx, end, obj))
+            obj, _ = decoder.raw_decode(text[match.start():])
         except json.JSONDecodeError:
             continue
-    if not candidates:
-        return {}
-    return max(candidates, key=lambda x: x[1])[2]
+        if isinstance(obj, dict):
+            return obj
+    return {}
 
 
 def timings_ok(data_dir: Path) -> bool:
@@ -266,10 +264,9 @@ def run_pipeline(py: str, cwd: Path) -> dict:
     completed.append("associate")
 
     # Phase 5 — pluggable backend
-    import shutil
-    if shutil.which("NLLoc"):
+    if shutil.which("NLLoc") or shutil.which("nll"):
         results["locate"] = run_step("locate", [
-            SCRIPTS / "p05_run_nll_locate.sh",
+            py, SCRIPTS / "p05_run_nll_locate.py",
             "--events", f"{w}/assoc/events.csv",
             "--picks", f"{w}/picks/phasenet_picks.csv",
             "--stations", stations_csv,
@@ -291,7 +288,6 @@ def run_pipeline(py: str, cwd: Path) -> dict:
         results["hypodd"] = run_step("hypodd", [
             py, SCRIPTS / "p06_run_hypodd.py",
             "--catalog", final_catalog,
-            "--waveforms", f"{w}/preprocessed",
             "--picks", f"{w}/picks/phasenet_picks.csv",
             "--stations", stations_csv,
             "--output-dir", f"{w}/locate/hypodd"], cwd)

@@ -32,7 +32,7 @@ def main() -> None:
         fail(f"no waveform files under {src}")
 
     try:
-        from seisbench.models import EQTransformer, PhaseNet #import the model
+        from seisbench.models import EQTransformer, PhaseNet
         import torch
     except ImportError as exc:
         fail(f"seisbench/torch unavailable: {exc}",
@@ -66,7 +66,8 @@ def main() -> None:
             continue
         n_traces += len(stream)
         try:
-            # classify() accepts the obspy Stream directly; thresholds are passed as "<phase>_threshold" kwargs (e.g. P_threshold). 此处调用选择的模型
+            # classify() takes the obspy Stream; detection thresholds are passed
+            # as "<phase>_threshold" kwargs.
             annotations = model.classify(
                 stream,
                 batch_size=args.batch_size,
@@ -91,10 +92,6 @@ def main() -> None:
     import pandas as pd
     df = pd.DataFrame(picks)
     df.to_csv(out_path, index=False)
-
-    elapsed_note = "CPU mode: expect 5-10x slower than GPU" if device == "cpu" else ""
-    if elapsed_note:
-        warn(elapsed_note)
 
     emit({
         "status": "ok",

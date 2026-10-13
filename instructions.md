@@ -447,7 +447,7 @@ volumes:
 | P3 震相拾取           | SeisBench/PhaseNet      | SeisBench/PhaseNet（不变）                                        | ✅ 完全等价       | 无                 |
 | P4 震相关联           | GaMMA                   | GaMMA 本身即纯 Python（AI4EPS/gamma）                             | ✅ 完全等价       | 无                 |
 | **P5 绝对定位** | NonLinLoc（C 编译）     | 自写 Geiger 迭代定位器：`obspy.taup` 走时 + 阻尼加权最小二乘 | ⚠️ 可跑通但降级 | 见 7.3             |
-| **P6 相对定位** | HypoDD/ph2dt（Fortran） | 无成熟纯 Python 实现；可自写简化版 DD 或跳过                      | ❌ 最大短板       | 见 7.3             |
+| **P6 相对定位** | HypoDD/ph2dt（Fortran） | relocDD-py：HypoDD 的纯 Python 移植（安装阶段 git 安装，不做波形互相关） | ⚠️ 可跑通但降级 | 见 7.3             |
 | P7 震级计算           | ObsPy WA 仿真           | ObsPy（不变，Bakun & Joyner 1984 标定式）                          | ✅ 完全等价       | 无                 |
 | P8 制图质检           | PyGMT                   | 改用 Cartopy + Matplotlib                                         | ✅ 可行           | 出版级地图质量略降 |
 
@@ -462,12 +462,14 @@ volumes:
   - 只能用一维速度模型，无法利用三维结构 → 深度误差通常从 <2km 恶化到 2–5km
   - 无法使用 SSST 等先进改进
 
-#### P6 相对定位：最大牺牲点
+#### P6 相对定位：可用纯 Python 后端，精度降级
 
-- HypoDD 是引用率最高的精定位工具，**没有维护良好的纯 Python 替代品**（经 GitHub/PyPI 核实，现有 wrapper 如 hypoDDpy 均已失效或仍依赖 Fortran 二进制）。
-- 折中路径：
-  1. **跳过 P6**，只交付绝对定位目录 → 相对误差停留在 ~1km 级，无法达到双差法的 0.1s/百米级；
-  2. **自写简化 DD**：ph2dt 的波形互相关部分可用 numpy/scipy 实现，反演部分用稀疏最小二乘（`scipy.sparse.linalg.lsqr`）实现线性化双差 → 对小数据集（数百事件）可行，大数据集性能与收敛性无保证。
+- 后端改用 **relocDD-py**（HypoDD 的纯 Python 移植，GPL-3.0），无需编译型 Fortran 二进制；
+  由 `packages/relocdd-py/install.py` 在安装阶段从 git 安装（上游无 `pyproject.toml`，见 `docs/install.md`）。
+- 降级点：relocDD-py 的 ph2dt **只基于目录拾取做差分走时，不做波形互相关**，
+  因此精度低于完整 HypoDD（波形互相关 + 反演），但仍显著优于绝对定位。
+- 若未安装 relocDD-py（`backends.hypodd == false`），则跳过 P6，只交付绝对定位目录 →
+  相对误差停留在 ~1km 级，无法达到双差法的 0.1s/百米级。
 - 这是第 8.2 节"震中偏差 <1km"验证指标最可能失守的环节。
 
 ### 7.4 隐性依赖排查
@@ -486,12 +488,12 @@ flowchart LR
     A[P1-P4,P7,P8<br/>纯Python无损] --> B[P5 绝对定位<br/>taup+Geiger迭代<br/>深度误差2-5km]
     B --> C{需要精定位?}
     C -->|否| D[✅ 工作流完整跑通]
-    C -->|是| E[❌ 必须引入HypoDD<br/>回到Docker/编译路线]
+    C -->|是| E[⚠️ 用 relocDD-py<br/>纯 Python 双差<br/>不做波形互相关]
 ```
 
 1. **假设成立**：不依赖任何编译型软件的轻量版工作流可端到端跑通，产出可用地震目录，适合原型开发、教学演示和小区域研究。
-2. **核心牺牲量化**：定位精度是唯一实质损失——绝对定位深度误差放大 2–3 倍，失去相对定位能力。
-3. **架构建议——可插拔定位后端**：Skill 设计上把 P5/P6 做成可插拔后端，脚本接口不变（JSON in/out），内部按环境探测：存在 `hypoDD`/`NLLoc` 二进制则调用之，否则回退到纯 Python 定位器。开发期（本机纯 Python）与生产期（容器内全功能）共用同一套 Skill，落实第 4.1 节"一套代码、两端复用"的原则。
+2. **核心牺牲量化**：定位精度是唯一实质损失——绝对定位用一维速度模型，深度误差放大 2–3 倍；P6 用 relocDD-py（ph2dt 不做波形互相关），精度低于完整 HypoDD。
+3. **架构建议——可插拔定位后端**：Skill 设计上把 P5/P6 做成可插拔后端，脚本接口不变（JSON in/out），内部按环境探测：存在 `hypoDD`/`NLLoc` 二进制则调用之，否则回退到纯 Python 定位器（P6 为 relocDD-py）。开发期（本机纯 Python）与生产期（容器内全功能）共用同一套 Skill，落实第 4.1 节"一套代码、两端复用"的原则。
 
 ---
 

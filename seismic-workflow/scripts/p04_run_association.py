@@ -52,29 +52,24 @@ def main() -> None:
                       [[-200, 200], [-200, 200], [0, 40], [-20, 20]])
     log(f"Loaded GaMMA config from {cfg_path}")
 
-    # --- dynamic time bounds for BFGS relocation ---
-    # GaMMA converts all pick timestamps to seconds relative to the earliest
-    # pick (timestamp0). Events that occur minutes/hours later have a relative
-    # time far beyond the fixed t_bounds like [-20, 20] s, which pins the
-    # origin-time during L-BFGS-B and makes every theoretical arrival miss the
-    # observed picks (so all picks get filtered => 0 events).
-    # Set t_bounds from the actual data span so late events relocate correctly.
+    # GaMMA converts pick times to seconds relative to the earliest pick, so the
+    # fixed origin-time bounds of the stock config (e.g. [-20, 20] s) pin t0 for
+    # events that occur minutes later: every theoretical arrival then misses its
+    # pick and the event is filtered away.  Widen the last bound to the data span.
     pick_times = pd.to_datetime(picks["time"], utc=True)
-    _t_spans = (pick_times.max() - pick_times.min()).total_seconds()
-    _t_margin = max(1.0, _t_spans * 0.1)
-    _t_bounds = [-_t_margin, _t_spans + _t_margin]
-    _st = config.get("bfgs_bounds", [[-200, 200], [-200, 200], [0, 40], [-20, 20]])
-    _st[3] = _t_bounds
-    config["bfgs_bounds"] = _st
-    log(f"Set bfgs time bounds to {_t_bounds} (data span {_t_spans:.0f}s)")
+    span_s = (pick_times.max() - pick_times.min()).total_seconds()
+    margin_s = max(1.0, span_s * 0.1)
+    config["bfgs_bounds"][3] = [-margin_s, span_s + margin_s]
+    log(f"Set bfgs time bounds to {config['bfgs_bounds'][3]} "
+        f"(data span {span_s:.0f}s)")
 
     # --- station geometry in local km coordinates (config["dims"]) ---
     proj = Proj(f"+proj=aeqd +lon_0={stations.longitude.mean()} "
                 f"+lat_0={stations.latitude.mean()} +units=km")
     stations[["x(km)", "y(km)"]] = stations.apply(
         lambda r: pd.Series(proj(r.longitude, r.latitude)), axis=1)
-    # GaMMA station id must match pick station id exactly; normalize both
-    # by stripping trailing dots ("XX.STA1." == "XX.STA1")
+    # GaMMA station id must match the pick id exactly: both are normalised by
+    # stripping the trailing dot ("XX.STA1." == "XX.STA1").
     stations["station"] = stations["station"].astype(str).str.strip(".")
     stations["id"] = stations["station"]
     stations["z(km)"] = -(stations.get("elevation_m", 0.0)).astype(float) / 1000.0
@@ -143,13 +138,11 @@ def main() -> None:
     pd.DataFrame(rows).to_csv(out, index=False)
 
     # --- persist the pick -> event association ------------------------------
-    # GaMMA returns (pick_index, event_index, prob) tuples, where pick_index
-    # positions into the frame passed above.  Exporting it lets Phase 5 select
-    # each event's own picks instead of falling back to a time window, which
-    # re-uses the same pick for several events and drags in unrelated arrivals.
-    # The prob member is intentionally not written: upstream zips a full-length
-    # probability array against the shorter filtered pick list, so those values
-    # can be misaligned.
+    # GaMMA reports associations as (pick_index, event_index, prob) tuples, so
+    # exporting them lets Phase 5 use each event's own picks instead of a time
+    # window, which re-uses one pick for several events.  The prob member is
+    # not written: upstream zips a full-length probability array against the
+    # shorter filtered pick list, so those values can be misaligned.
     assign_rows = [
         {"pick_index": int(pick_rows[int(a[0])]),
          "event_id": f"ev{int(a[1]):06d}"}

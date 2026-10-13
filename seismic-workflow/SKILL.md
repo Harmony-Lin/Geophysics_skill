@@ -93,15 +93,19 @@ Phase 1 明确分为两步，**不要混在一起做**：
 #### 步骤 2：用脚本在权威目录里解析出唯一事件
 
 ```bash
-python scripts/p01_resolve_event.py --text "2024年1月1日 日本能登半岛 7.6级地震"
+python scripts/p01_resolve_event.py \
+  --start 2024-01-01T07:00:00Z --end 2024-01-01T08:00:00Z \
+  --latitude 37.5 --longitude 137.2 --min-magnitude 6.5 \
+  --text "2024年1月1日 日本能登半岛 7.6级地震"
 ```
 
-可用输入（至少提供一个）：`--text`（自由文本/地名，交给 FDSN 事件服务全文检索）、
-`--event-id`、`--start/--end`、`--latitude/--longitude [--within-km]`、
-`--min-magnitude`、`--event-datacenter`（默认依次查 `USGS`→`ISC`→`EMSC`）。
+可用输入（至少提供一个）：`--event-id`、`--start/--end`、
+`--latitude/--longitude [--within-km]`、`--min-magnitude`、`--catalog`。
+脚本依次查询 `USGS`→`ISC`→`EMSC` 事件目录。
 
-**如果你已经用浏览器工具查到了事件 ID，优先用 `--event-id`**（一次命中，最省时间）；
-把 `--text` 留给"只有地名+时间"的情形。
+**脚本不做自然语言检索**：`--text` 只作为溯源信息记录下来，不参与查询。因此你必须先把
+用户的话（地名/日期/震级）转换成时间窗、震中坐标或事件编号，再交给本脚本；
+**若已用浏览器工具查到事件 ID，优先用 `--event-id`**（一次命中，最省时间）。
 
 读 stdout JSON 的 `resolution` 字段，按下表行动：
 
@@ -110,7 +114,7 @@ python scripts/p01_resolve_event.py --text "2024年1月1日 日本能登半岛 7
 | `resolved`        | `false`          | 已唯一确定，直接用 `download_plan` 进入步骤 4                  |
 | `resolved`        | `true`           | 脚本按震级自动挑出了主震，先把 `question` 念给用户确认        |
 | `ambiguous`       | `true`           | 把 `question` 与候选列表 (`candidates`) 交给用户选择         |
-| `not_found`       | `true`           | 按 `question` 让用户补充信息；或改换 `--text` 关键词再试一次 |
+| `not_found`       | `true`           | 按 `question` 让用户补充信息；或换一组关键词/时间窗重跑一次 |
 | `insufficient_input` | `true`          | 按 `question` 向用户索取缺失的参数（时间/地区/事件 ID）      |
 
 **你必须把 `question` 真正念给用户并等待回答**，不得自行假定；用户确认后再继续。
@@ -256,18 +260,17 @@ python scripts/p02_preprocess.py \
 ```
 
 - `--filter` 格式为 `<低频>-<高频>` Hz 带通；拾取用默认 0.5–20 Hz 即可。
-- `--resample` 单位 Hz；不要低于原采样率的一半。
+- `--resample` 单位 Hz；不要低于原采样率的一半，否则高频截止会被折叠进带内。
 - `--detrend` / `--demean` 默认开启，需要保留原始趋势时用 `--no-detrend` / `--no-demean` 关闭。
 - `--remove-response` 输出 `output="VEL"`（**地面速度 m/s**），这是 Phase 7 Wood-Anderson 仿真所需的输入域。缺少 StationXML 时该选项会**直接报错退出**，不会静默跳过。
 - 若无仪器响应文件，去掉 `--remove-response`（此时震级计算 ML 将不可用，需在报告中注明），并给 Phase 7 加 `--no-stations`。
-- `--filter` 与 `--resample` 可同时使用，但 `--resample` 会自动调整 `--filter` 的截止频率，以避免过采样。
 
 **成功判据**：`status=="ok"` 且 `n_traces_processed == n_traces_input - n_traces_failed`；
 去响应时还应满足 `remove_response_requested==true`、`response_removed==true`、
 `output_units=="M/S"`，且 `n_traces_response_removed == n_traces_processed`。
-`output_units=="MIXED"` 表示只有部分 trace 去响应成功，必须停下来排查。
 
 **错误处理**：`n_traces_failed > 0` 时查看 stderr 中 `[WARN]` 行列出的台站；
+去响应失败的 trace 会被整条丢弃（不写入输出目录，因此输出单位永远是单一的），
 失败比例 >10% 则停止并报告用户（可能是响应文件缺失或格式损坏）。
 
 **耗时与性能**：脚本按操作统计耗时（`read mseed` / `detrend linear` / `demean` /
@@ -352,7 +355,7 @@ python scripts/p04_run_association.py \
 ### 后端 A：NonLinLoc（存在 NLLoc 二进制时，生产环境首选）
 
 ```bash
-bash scripts/p05_run_nll_locate.sh \
+python scripts/p05_run_nll_locate.py \
   --events data/assoc/events.csv \
   --picks data/picks/phasenet_picks.csv \
   --stations data/stations/stations.csv \
@@ -381,7 +384,6 @@ python scripts/p05_grid_locate.py \
 事件拾取取自 Phase 4 的 `assignments.csv`（存在时）；理论走时用 IASP91 的
 （深度, 震中距）网格插值，并缓存到 `seismic-workflow/.cache/`。
 已知局限：一维速度模型、无 PDF 不确定度输出，深度误差约 2–5 km。
-`--cell-km` 为兼容旧调用保留，现已废弃（仅记录到日志，不影响计算）。
 
 **成功判据**（两后端相同）：`status=="ok"` 且 `n_located >= 0.5 * n_events_input`。
 
@@ -398,14 +400,13 @@ python scripts/p05_grid_locate.py \
 
 1. 用户明确要求精定位；
 2. 事件数 ≥ 50；
-3. Phase 0 显示 `backends.hypodd == true`（即已安装 relocDD-py），或用户接受简化版 DD（精度有限）。
+3. Phase 0 显示 `backends.hypodd == true`（即已安装 relocDD-py）。
 
-### 后端 A：relocDD-py（纯 Python 双差定位，安装阶段 git 安装）
+### relocDD-py（纯 Python 双差定位，安装阶段 git 安装）
 
 ```bash
-bash scripts/p06_run_hypodd.sh \
+python scripts/p06_run_hypodd.py \
   --catalog data/locate/catalog_abs.csv \
-  --waveforms data/preprocessed \
   --picks data/picks/phasenet_picks.csv \
   --stations data/stations/stations.csv \
   --output-dir data/locate/hypodd
@@ -416,23 +417,11 @@ bash scripts/p06_run_hypodd.sh \
 全部由包装器完成，无需编译型 Fortran 二进制。调参见 `references/hypodd_workflow.md`。
 
 > 注意：relocDD-py 的 ph2dt 仅基于目录拾取（phase.dat）构建差分走时，**不做波形互相关**，
-> 因此 `--waveforms` 仅为兼容保留、不参与计算。
+> 因此无需波形文件。
 >
 > 依赖：relocDD-py 在安装阶段由 `packages/relocdd-py/install.py` 从 git 安装
 > （上游无 `pyproject.toml`，见 `docs/install.md`），运行阶段不再联网。
-> 若 `backends.hypodd == false`，改用后端 B 并在报告中注明。
-
-### 后端 B：简化版双差（纯 Python 回退）
-
-```bash
-python scripts/p06_simple_dd.py \
-  --catalog data/locate/catalog_abs.csv \
-  --waveforms data/preprocessed \
-  --stations data/stations/stations.csv \
-  --output data/locate/catalog_dd.csv
-```
-
-适用数百事件的小数据集；大数据集性能与收敛性无保证。
+> 若 `backends.hypodd == false`，跳过本阶段并在报告中注明"未做相对定位"。
 
 **成功判据**：`status=="ok"` 且 `n_relocated > 0`。
 

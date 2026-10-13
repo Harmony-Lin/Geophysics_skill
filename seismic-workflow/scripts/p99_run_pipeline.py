@@ -6,13 +6,16 @@ stages. Designed for deterministic execution without LLM mid-decisions.
 
 Every phase is timed: the duration is logged to stderr, recorded inside the
 phase JSON/log (``<phase>.log``) and aggregated into
-``data/pipeline_logs/timings.json``, which Phase 8 renders into ``report.md``.
+``<workdir>/pipeline_logs/timings.json``, which Phase 8 renders into
+``report.md``.
 """
 from __future__ import annotations
 
 import argparse
 import importlib.util
 import json
+import re
+import shutil
 import subprocess
 import sys
 import time
@@ -20,11 +23,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from common import (emit, ensure_dir, fail, format_duration, log,  # noqa: E402
+from common import (emit, fail, format_duration, log,  # noqa: E402
                     phase_label, run_main, save_stations_csv,
                     stations_from_xml, warn)
 
 SCRIPTS = Path(__file__).parent
+#: Rebound to ``<workdir>/pipeline_logs`` by ``main()``, so the logs land next
+#: to the data they describe (Phase 8 looks for them there).
 LOG_DIR = Path("data") / "pipeline_logs"
 TIMINGS_FILE = LOG_DIR / "timings.json"
 
@@ -37,33 +42,24 @@ def _has_module(name: str) -> bool:
 
 
 def parse_last_json(text: str) -> dict:
-    """Extract the last complete JSON object from mixed stdout.
+    """Return the last top-level JSON object printed by a phase script.
 
-    Some libraries (e.g. GaMMA) print progress lines to stdout, polluting
-    the JSON contract; find the OUTERMOST/LONGEST {...} block that parses.
+    Some libraries (e.g. GaMMA) print progress lines to stdout, so the JSON is
+    not the whole stream.  ``common.emit`` prints with ``indent=2``, i.e. with
+    the opening brace of the result object in column 0, which is what tells it
+    apart from nested objects.
     """
     if not text or not text.strip():
         return {}
     decoder = json.JSONDecoder()
-    candidates = []
-    
-    # Find all valid JSON objects starting from each "{" position
-    for idx in range(len(text)):
-        if text[idx] != "{":
-            continue
+    for match in reversed(list(re.finditer(r"^\{", text, re.MULTILINE))):
         try:
-            obj, end = decoder.raw_decode(text[idx:])
-            # Track (position, length, object) to find the outermost one
-            obj_text = text[idx:idx + end]
-            candidates.append((idx, end, obj))
+            obj, _ = decoder.raw_decode(text[match.start():])
         except json.JSONDecodeError:
             continue
-    
-    if not candidates:
-        return {}
-    
-    # Return the object with the longest span (outermost/topmost)
-    return max(candidates, key=lambda x: x[1])[2]
+        if isinstance(obj, dict):
+            return obj
+    return {}
 
 
 def _write_timings() -> Path:
@@ -157,6 +153,9 @@ def main() -> None:
     t_pipeline = time.perf_counter()
     w = args.workdir
     results = {}
+    global LOG_DIR, TIMINGS_FILE
+    LOG_DIR = Path(w) / "pipeline_logs"
+    TIMINGS_FILE = LOG_DIR / "timings.json"
 
     # ── 台站元数据：P2 去响应与 P7 计算 ML 都强依赖响应文件 ──
     stations_dir = Path(args.stations_dir or f"{w}/stations")
@@ -211,11 +210,10 @@ def main() -> None:
         "--output", f"{w}/assoc/events.csv"])
 
     if args.skip != "locate":
-        # Phase 5 — pluggable backend
-        import shutil
-        if shutil.which("NLLoc"):
+        # Phase 5 — pluggable backend (see SKILL.md Phase 5)
+        if shutil.which("NLLoc") or shutil.which("nll"):
             results["locate"] = run_step("locate", [
-                str(SCRIPTS / "p05_run_nll_locate.sh"),
+                sys.executable, str(SCRIPTS / "p05_run_nll_locate.py"),
                 "--events", f"{w}/assoc/events.csv",
                 "--picks", f"{w}/picks/phasenet_picks.csv",
                 "--stations", stations_csv,
@@ -236,7 +234,6 @@ def main() -> None:
             results["hypodd"] = run_step("hypodd", [
                 sys.executable, str(SCRIPTS / "p06_run_hypodd.py"),
                 "--catalog", final_catalog,
-                "--waveforms", f"{w}/preprocessed",
                 "--picks", f"{w}/picks/phasenet_picks.csv",
                 "--stations", stations_csv,
                 "--output-dir", f"{w}/locate/hypodd"])
@@ -255,13 +252,12 @@ def main() -> None:
         "--output", f"{w}/locate/catalog_final.csv"]
     if stations_xml_opt:
         magnitude_cmd += ["--stations", stations_xml_opt, "--assume-units", "VEL"]
-    # 无响应文件时不给 --stations，p07 会输出 status=warning +
+    # 无响应文件时不给 --stations：p07 会输出 status=warning +
     # magnitude_available=false（明确表示"没有震级"），而不是拿 counts
     # 当作物理量算出一个错误的震级。
     results["magnitude"] = run_step("magnitude", magnitude_cmd)
 
-    # Phase 8
-    _write_timings()  # flush P2-P7 durations for the report before P8 starts
+    # Phase 8 (run_step already persisted P2-P7 timings to disk)
     results["qc"] = run_step("qc", [
         sys.executable, str(SCRIPTS / "p08_qc_and_plot.py"),
         "--catalog", f"{w}/locate/catalog_final.csv",

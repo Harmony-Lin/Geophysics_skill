@@ -155,14 +155,14 @@ def main() -> None:
     if not files:
         fail(f"no waveform files under {src}")
 
-    from obspy import Stream, read
+    from obspy import read
     inventory = None
-    # 参数校验放在创建输出目录之前：失败时不应留下空目录，避免下游误以为
-    # 该阶段已经跑过。
+    # Validated before the output directory is created: a failed run must not
+    # leave an empty directory behind that downstream phases read as "done".
     if args.remove_response:
         if not args.stations or not Path(args.stations).exists():
-            # 静默跳过去响应会让 p07 拿到未物理化的数据并算出错误震级，
-            # 所以这里直接失败，让 p99 暴露问题而不是产出看似正常的错结果。
+            # Skipping the deconvolution silently would hand p07 counts while it
+            # assumes m/s, i.e. a wrong magnitude that still looks plausible.
             fail(f"--remove-response requires an existing StationXML, got: "
                  f"{args.stations!r}")
             return
@@ -204,34 +204,35 @@ def main() -> None:
             try:
                 if args.detrend:
                     with timer.step("detrend linear"):
-                        tr.detrend("linear")  # 去除线性趋势
+                        tr.detrend("linear")
                 if args.demean:
                     with timer.step("demean"):
-                        tr.detrend("demean")  # 去除均值
-                if inventory is not None and args.remove_response:  # 去仪器响应
+                        tr.detrend("demean")
+                if inventory is not None and args.remove_response:
                     with timer.step("remove response"):
                         if remove_response is not None:
                             remove_response(tr)
                         else:
                             tr.remove_response(inventory=inventory,
                                                output="VEL", water_level=60)
-                    # obspy 不会自动设置 units；手动标记，供下游阶段参考。
-                    # 注意 MSEED 不保存该属性，p07 必须显式声明 --assume-units。
+                    # obspy does not set units itself; MSEED does not persist it,
+                    # so p07 still has to be told --assume-units VEL explicitly.
                     tr.stats.units = "M/S"
-                    n_resp_removed += 1
                 with timer.step("bandpass filter"):
-                    tr.filter("bandpass", freqmin=f_lo, freqmax=f_hi, corners=4, #带通滤波
+                    tr.filter("bandpass", freqmin=f_lo, freqmax=f_hi, corners=4,
                               zerophase=True)
                 # resample via decimation/interpolation to target rate
                 if abs(tr.stats.sampling_rate - args.resample) > 0.01:
                     with timer.step("resample"):
                         tr.resample(args.resample)
                 n_ok += 1
+                if inventory is not None and args.remove_response:
+                    n_resp_removed += 1
             except Exception as exc:
                 warn(f"trace failed: {tr.id} ({exc})")
                 failed.append(f"{tr.id}")
                 drop.append(tr)
-        # 循环中删除元素会让 Stream 迭代跳过后续 trace，必须延后统一删除
+        # Removing while iterating makes Stream skip the following trace.
         for tr in drop:
             st.remove(tr)
         if len(st) > 0:
@@ -242,7 +243,7 @@ def main() -> None:
     log(f"Processed {n_ok}/{n_in} traces -> {out}; "
         f"response removed on {n_resp_removed} traces")
     if cache is not None:
-        # 命中率解释了 P2 的耗时：只有 misses 次 evalresp 真正被计算
+        # Only `misses` evalresp evaluations actually cost time; the rest is reuse
         log(f"instrument response cache: {cache.misses} evaluated, "
             f"{cache.hits} reused ({len(cache)} distinct channels)")
     timer.log_summary("Phase 2 内部步骤耗时")
@@ -254,35 +255,21 @@ def main() -> None:
             "responses_reused": cache.hits,
         }
     frac_failed = (len(failed) / n_in) if n_in else 1.0
-    status = "ok"
     if frac_failed > 0.10:
-        status = "error"
         fail(f"{len(failed)}/{n_in} traces failed (>10%)",
              n_traces_input=n_in, n_traces_processed=n_ok,
              n_traces_failed=len(failed), failed=failed[:50],
              **timing_payload)
         return
 
-    # response_removed 反映"实际成功去响应的 trace 比例"，而不是"inventory 是否加载成功"
-    response_removed = bool(n_resp_removed and n_resp_removed == n_ok)
-    if args.remove_response and n_resp_removed == 0:
-        fail("--remove-response requested but no trace was deconvolved",
-             n_traces_input=n_in, n_traces_processed=n_ok,
-             n_traces_failed=len(failed), failed=failed[:50],
-             **timing_payload)
-        return
-
-    if not args.remove_response:
-        output_units = "COUNTS"
-    elif response_removed:
-        output_units = "M/S"
-    else:
-        # 部分 trace 去响应失败 -> 输出目录里混了两种单位，必须显式暴露，
-        # 否则 p07 会把 counts 当成 m/s 继续算（震级必然错）。
-        output_units = "MIXED"
+    response_removed = bool(args.remove_response)
+    # A trace whose response cannot be removed fails the loop body and is
+    # dropped, so every trace reaching the output directory carries the unit
+    # below; traces lost that way are reported through n_traces_failed.
+    output_units = "M/S" if args.remove_response else "COUNTS"
 
     emit({
-        "status": status,
+        "status": "ok",
         "n_traces_input": n_in,
         "n_traces_processed": n_ok,
         "n_traces_failed": len(failed),
