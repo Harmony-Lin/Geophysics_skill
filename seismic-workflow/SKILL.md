@@ -108,13 +108,13 @@ python scripts/p01_resolve_event.py \
 
 读 stdout JSON 的 `resolution` 字段，按下表行动：
 
-| `resolution`        | `needs_user_input` | 你的动作                                                       |
-| ------------------- | ------------------ | -------------------------------------------------------------- |
-| `resolved`        | `false`          | 已唯一确定，直接用 `download_plan` 进入步骤 4                  |
-| `resolved`        | `true`           | 脚本按震级自动挑出了主震，先把 `question` 念给用户确认        |
-| `ambiguous`       | `true`           | 把 `question` 与候选列表 (`candidates`) 交给用户选择         |
-| `not_found`       | `true`           | 按 `question` 让用户补充信息；或换一组关键词/时间窗重跑一次 |
-| `insufficient_input` | `true`          | 按 `question` 向用户索取缺失的参数（时间/地区/事件 ID）      |
+| `resolution`         | `needs_user_input` | 你的动作                                                     |
+| ---------------------- | -------------------- | ------------------------------------------------------------ |
+| `resolved`           | `false`            | 已唯一确定，直接用`download_plan` 进入步骤 4               |
+| `resolved`           | `true`             | 脚本按震级自动挑出了主震，先把`question` 念给用户确认      |
+| `ambiguous`          | `true`             | 把`question` 与候选列表 (`candidates`) 交给用户选择      |
+| `not_found`          | `true`             | 按`question` 让用户补充信息；或换一组关键词/时间窗重跑一次 |
+| `insufficient_input` | `true`             | 按`question` 向用户索取缺失的参数（时间/地区/事件 ID）     |
 
 **你必须把 `question` 真正念给用户并等待回答**，不得自行假定；用户确认后再继续。
 
@@ -126,30 +126,29 @@ python scripts/p01_resolve_event.py \
 
 脚本已经查过 FDSN 事件目录，通常不需要再联网。仅当出现下列情况时用浏览器工具补充：
 
-| 平台                    | 用途                              |
-| ----------------------- | --------------------------------- |
-| USGS ComCat             | 全球 M4.5+，看 `eventid` 与目录 |
-| ISC Bulletin            | 重新定位、参考深度                |
-| EMSC (`seismicportal.eu`) | 欧地中海、实时事件              |
-| GCMT                    | 震源机制、`Mw`                  |
-| 中国地震台网 (CEIC)     | 中国及周边事件的官方参数          |
+| 平台                        | 用途                             |
+| --------------------------- | -------------------------------- |
+| USGS ComCat                 | 全球 M4.5+，看`eventid` 与目录 |
+| ISC Bulletin                | 重新定位、参考深度               |
+| EMSC (`seismicportal.eu`) | 欧地中海、实时事件               |
+| GCMT                        | 震源机制、`Mw`                 |
+| 中国地震台网 (CEIC)         | 中国及周边事件的官方参数         |
 
-核实后把坐标/时间/震级**回填给 `p01_resolve_event.py`**（`--start --end --latitude
---longitude --min-magnitude`）重新解析一次，让脚本自己确定唯一事件，不要手工拼下载命令。
+核实后把坐标/时间/震级**回填给 `p01_resolve_event.py`**（`--start --end --latitude --longitude --min-magnitude`）重新解析一次，让脚本自己确定唯一事件，不要手工拼下载命令。
 
 #### 步骤 3：选择合适的台网与数据中心
 
-| 目标区域               | 推荐数据中心 (`--datacenter`，实测可用)          | 推荐台网代码                                           | 说明                                             |
-| ---------------------- | -------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------ |
-| **美国加州**     | `NCEDC,SCEDC,IRIS`                               | `BK`, `CI`, `NC`, `PG`, `SB`                     | NCEDC/SCEDC 台站与波形最全，首选               |
-| **美国其他/Alaska** | `IRIS`                                           | `US`, `TA`, `AK`, `CN`                           | EarthScope 覆盖全国                            |
-| **日本**         | `IRIS`, `GEONET`                                 | `JP`, `JU`, `VU`, `XJ`, `PS`                     | **Hi-net/K-NET 不开放 FDSN**；靠 IRIS 镜像的 F-net/JP |
-| **台湾**         | `IRIS`, `GEONET`                                 | `TW`, `TA`, `TP`                                 | 中央气象局台网经 IRIS 分发                     |
-| **中国大陆**     | `IRIS`                                           | `CB`, `KC`, `G`, `II`, `IC`                      | **CENC 的 FDSN 端口已失效**；大陆台站稀疏     |
-| **欧洲/地中海**  | `EIDA`, `RESIF`, `IRIS`                          | `GE`, `GR`, `HT`, `IV`, `MN`, `CH`               | `GFZ`/`INGV` 端点当前不可达，用 EIDA/RESIF 兜底 |
-| **新西兰**       | `GEONET`, `IRIS`                                 | `NZ`, `IU`                                       | GeoNet FDSN 可用                               |
-| **南美**         | `IRIS`, `USP`                                    | `BL`, `IU`, `BR`                                 | 覆盖偏疏，需放大 `--max-radius`              |
-| **全球通用备选** | `IRIS`（EarthScope 聚合）                         | `*` (所有可用)                                       | 兜底方案，速度较慢                             |
+| 目标区域                  | 推荐数据中心 (`--datacenter`，实测可用) | 推荐台网代码                                   | 说明                                                        |
+| ------------------------- | ----------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------- |
+| **美国加州**        | `NCEDC,SCEDC,IRIS`                      | `BK`, `CI`, `NC`, `PG`, `SB`         | NCEDC/SCEDC 台站与波形最全，首选                            |
+| **美国其他/Alaska** | `IRIS`                                  | `US`, `TA`, `AK`, `CN`                 | EarthScope 覆盖全国                                         |
+| **日本**            | `IRIS`, `GEONET`                      | `JP`, `JU`, `VU`, `XJ`, `PS`         | **Hi-net/K-NET 不开放 FDSN**；靠 IRIS 镜像的 F-net/JP |
+| **台湾**            | `IRIS`, `GEONET`                      | `TW`, `TA`, `TP`                         | 中央气象局台网经 IRIS 分发                                  |
+| **中国大陆**        | `IRIS`                                  | `CB`, `KC`, `G`, `II`, `IC`          | **CENC 的 FDSN 端口已失效**；大陆台站稀疏             |
+| **欧洲/地中海**     | `EIDA`, `RESIF`, `IRIS`             | `GE`, `GR`, `HT`, `IV`, `MN`, `CH` | `GFZ`/`INGV` 端点当前不可达，用 EIDA/RESIF 兜底         |
+| **新西兰**          | `GEONET`, `IRIS`                      | `NZ`, `IU`                                 | GeoNet FDSN 可用                                            |
+| **南美**            | `IRIS`, `USP`                         | `BL`, `IU`, `BR`                         | 覆盖偏疏，需放大`--max-radius`                            |
+| **全球通用备选**    | `IRIS`（EarthScope 聚合）               | `*` (所有可用)                               | 兜底方案，速度较慢                                          |
 
 **台网选择策略：**
 
@@ -374,13 +373,9 @@ python scripts/p05_grid_locate.py \
 
 ---
 
-## Phase 6: 相对定位（可选，精定位）
+## Phase 6: 相对定位
 
-仅当满足以下全部条件才执行，否则直接跳到 Phase 7 并在报告中注明"未做相对定位"：
-
-1. 用户明确要求精定位；
-2. 事件数 ≥ 50；
-3. Phase 0 显示 `backends.hypodd == true`（即已安装 relocDD-py）。
+仅当Phase 0 显示 `backends.hypodd == true`（即已安装 relocDD-py）的时候才执行，否则否则直接跳到 Phase 7 并在报告中注明"未做相对定位"。
 
 ### relocDD-py（纯 Python 双差定位，安装阶段 git 安装）
 

@@ -569,13 +569,13 @@ def _timing_block(timings: dict | None, self_elapsed_s: float | None,
                 inner += (f"（仪器响应仅实际评估 "
                           f"{cache['responses_evaluated']} 条道，"
                           f"{cache.get('responses_reused', 0)} 条复用缓存）")
-            details.append(f"- **{label}** 内部步骤：{inner}")
+            details.append(f"- **{label}** inner steps：{inner}")
     if self_elapsed_s is not None:
         label = "P8 质检与制图（本阶段）"
         rows.append((label, float(self_elapsed_s)))
         inner = _inner_steps(self_timings)
         if inner:
-            details.append(f"- **{label}** 内部步骤：{inner}")
+            details.append(f"- **{label}** inner steps：{inner}")
     if not rows:
         return "（本次运行未记录耗时）"
     total = sum(secs for _, secs in rows)
@@ -719,6 +719,59 @@ def _ml_stats_from_diag(catalog_path, catalog, stations) -> dict:
     log(f"Magnitude diagnostics: single-station ML summarised for "
         f"{len(stats)}/{len(catalog)} events")
     return stats
+
+
+def _export_median_ml_traces(catalog_path, outdir: Path):
+    """Write trace-level ML rows retained by the per-event median filter."""
+    import pandas as pd
+
+    diag_path = Path(catalog_path).with_suffix(".magnitude_diag.csv")
+    if not diag_path.exists():
+        warn(f"magnitude diagnostics not found ({diag_path.name}); "
+             "median-participating trace CSV omitted")
+        return None
+    try:
+        diag = pd.read_csv(diag_path)
+    except Exception as exc:
+        warn(f"magnitude diagnostics unreadable ({exc}); "
+             "median-participating trace CSV omitted")
+        return None
+
+    required = {"event_id", "trace_id", "single_ml"}
+    if not required <= set(diag.columns):
+        missing = ", ".join(sorted(required - set(diag.columns)))
+        warn(f"magnitude diagnostics lacks {missing}; "
+             "median-participating trace CSV omitted")
+        return None
+
+    diag["single_ml"] = pd.to_numeric(diag["single_ml"], errors="coerce")
+    kept_rows = []
+    for _, group in diag.groupby("event_id", sort=False):
+        valid = group.loc[group["single_ml"].notna()]
+        if valid.empty:
+            continue
+        median_ml = float(valid["single_ml"].median())
+        keep = np.abs(valid["single_ml"].to_numpy() - median_ml) <= 0.5
+        if not keep.any():
+            keep = np.ones(len(valid), dtype=bool)
+        retained = valid.loc[keep].copy()
+        retained["event_median_ml"] = median_ml
+        retained["deviation_from_median"] = (
+            retained["single_ml"] - median_ml).abs()
+        kept_rows.append(retained)
+
+    columns = [*diag.columns, "event_median_ml", "deviation_from_median"]
+    if kept_rows:
+        result = pd.concat(kept_rows, ignore_index=True)
+        result = result.sort_values("single_ml", kind="mergesort")
+    else:
+        result = pd.DataFrame(columns=columns)
+
+    out_path = outdir / "median_ml_traces.csv"
+    result.to_csv(out_path, index=False)
+    log(f"Median-participating trace ML CSV written to {out_path} "
+        f"({len(result)} traces, sorted by single_ml)")
+    return out_path
 
 
 def _quality_flag(n_stations, rms_s, has_mag: bool = True, *, rms_ref=None,
@@ -941,6 +994,7 @@ def _write_report(outdir: Path, catalog, stations, paths: dict, map_backend,
 
 {ml_table if ml_table else '（未找到 p07 震级诊断文件，跳过本节）'}
 
+{f"> 参与事件震级中位数的逐道记录（按单台 ML 升序）：`{Path(paths['median_ml_traces']).name}`。" if paths.get('median_ml_traces') else ''}
 > 单台 ML 范围为逐道结果，未剔除离群；中位/标准差为剔除偏离中位 0.5 级以上的道之后的结果，与目录最终 ML 的口径一致。
 > 方位角间隙由台站经纬度计算，仅统计能在台站表中匹配到坐标的台站。
 
@@ -1025,13 +1079,17 @@ def main() -> None:
     else:
         warn("--picks not given or missing; skipping pick sample plot")
 
+    with timer.step("P8 median ML trace CSV"):
+        ml_trace_csv = _export_median_ml_traces(args.catalog, outdir)
+
     timer.log_summary("Phase 8 内部步骤耗时")
 
     with timer.step("P8 report"):
         report_path = _write_report(
             outdir, catalog, stations,
             paths=dict(catalog=args.catalog, stations=args.stations,
-                       picks=args.picks, waveforms=args.waveforms),
+                       picks=args.picks, waveforms=args.waveforms,
+                       median_ml_traces=ml_trace_csv),
             map_backend=map_backend, map_layers=map_layers, gr=gr,
             pick_info=pick_info, backend_note=args.backend_note,
             timings=timings, self_elapsed_s=timer.total_s,
@@ -1046,6 +1104,7 @@ def main() -> None:
         "b_value": gr["b"] if gr else None,
         "mean_rms_s": res["mean_rms_s"] if res else None,
         "report_file": str(report_path),
+        "median_ml_traces_file": str(ml_trace_csv) if ml_trace_csv else None,
         "plots": ["epicenter_map.png", "gr_relation.png",
                   "depth_histogram.png", "residuals.png", "pick_samples.png"],
         "pick_samples": pick_info,

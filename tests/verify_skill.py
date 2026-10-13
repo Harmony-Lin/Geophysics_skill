@@ -215,7 +215,7 @@ def run_step(name: str, cmd: list[str], cwd: Path) -> dict:
         entry["response_cache"] = result["response_cache"]
     TIMINGS.append(entry)
     write_timings(log_dir)
-    print(f"=== Phase {name} 耗时 {fmt_duration(elapsed)} "
+    print(f"=== Phase {name} takes {fmt_duration(elapsed)} "
           f"(exit {proc.returncode})")
     if proc.returncode != 0 or result.get("status") not in ("ok", "warning"):
         if result.get("status") != "error":
@@ -455,7 +455,7 @@ def main() -> int:
           inner.get("preprocess", 0) >= 5
           and "remove response" in prep_log
           and "remove response" in report_txt,
-          f"timings.json 内部步骤={inner}, "
+          f"timings.json inner steps={inner}, "
           f"preprocess.log={'yes' if 'remove response' in prep_log else 'no'}, "
           f"report={'yes' if 'remove response' in report_txt else 'no'}")
 
